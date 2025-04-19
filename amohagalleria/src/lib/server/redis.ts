@@ -1,7 +1,7 @@
 // lib/server/redis.ts
 import { createClient } from 'redis';
 
-const redisClient = createClient({
+export const redisClient = createClient({
     url: process.env.REDIS_URL
 });
 

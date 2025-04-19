@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "start:cron": "ts-node --esm src/lib/server/notifications/cron/index.ts",
     "lint": "next lint"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "lucide-react": "^0.487.0",
     "motion": "^12.6.3",
     "next": "^15.3.0",
+    "node-cron": "^3.0.3",
     "react": "^19.1.0",
     "react-day-picker": "^8.10.1",
     "react-dom": "^19.1.0",
@@ -51,8 +53,10 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "15.3.0",
     "tailwindcss": "^4",
