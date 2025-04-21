@@ -1,7 +1,7 @@
 // app/api/cart/guest/route.ts
 import { NextResponse } from 'next/server';
 import { getGuestCart, updateGuestCart, clearGuestCart } from '@/lib/server/redis';
-import { GuestNotificationService } from '@/lib/server/notifications/guest/guestNotifications';
+import { GuestNotificationService } from '@/lib/server/notifications/cart/guest/guestNotifications';
 
 export async function GET(request: Request) {
     try {

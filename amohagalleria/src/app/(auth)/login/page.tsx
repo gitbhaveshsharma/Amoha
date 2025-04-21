@@ -15,6 +15,7 @@ import SignupCard from "../profile-setup/ProfileSetup";
 import OtpCard from "../otp/OtpCard";
 import { migrateGuestWishlist } from '@/lib/wishlistMigration';
 import { migrateGuestCart } from '@/lib/cartMigration';
+import { migrateGuestNotificationPreferences } from "@/lib/notificationMigration";
 
 import { supabase } from "@/lib/supabase";
 import {
@@ -94,7 +95,8 @@ export default function AuthPage() {
             // Migrate both wishlist and cart
             await Promise.all([
                 migrateGuestWishlist(currentSession.user.id),
-                migrateGuestCart(currentSession.user.id)
+                migrateGuestCart(currentSession.user.id),
+                migrateGuestNotificationPreferences(currentSession.user.id)
             ]);
             // Refresh both stores
             // await Promise.all([

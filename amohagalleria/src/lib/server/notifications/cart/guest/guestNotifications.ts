@@ -1,5 +1,5 @@
 // lib/server/guest/guestNotifications.ts
-import { redisClient } from '../../redis';
+import { redisClient } from '../../../redis';
 import { supabase } from '@/lib/supabase';
 
 interface NotificationData {

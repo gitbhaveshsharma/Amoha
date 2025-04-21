@@ -1,5 +1,5 @@
 // lib/server/cron/guestNotifications.ts
-import { GuestNotificationService } from '../guest/guestNotifications';
+import { GuestNotificationService } from '../cart/guest/guestNotifications';
 import { supabase } from '@/lib/supabase';
 
 export async function checkGuestNotifications() {

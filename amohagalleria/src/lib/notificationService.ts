@@ -32,18 +32,43 @@ export const NotificationService = {
             // Get device information
             const deviceInfo = await this.getDeviceInfo();
 
+            // First, get the existing device record if it exists
+            const { data: existingDevice } = await supabase
+                .from('user_devices')
+                .select('user_id')
+                .eq('device_fingerprint', deviceId)
+                .maybeSingle();
+
+            // Prepare the update data
+            interface UpdateData {
+                device_fingerprint: string;
+                device_type: string;
+                browser: string;
+                os: string;
+                last_active_at: string;
+                user_id?: string;
+            }
+
+            const updateData: UpdateData = {
+                device_fingerprint: deviceId,
+                device_type: deviceInfo.device_type,
+                browser: deviceInfo.browser,
+                os: deviceInfo.os,
+                last_active_at: new Date().toISOString(),
+            };
+
+            // Only update user_id if:
+            // 1. We have a userId (user is logged in)
+            // 2. The existing record either has no user_id or the same user_id
+            if (userId && (!existingDevice || !existingDevice.user_id || existingDevice.user_id === userId)) {
+                updateData.user_id = userId;
+            }
+
             // Get or create device record
             const { error: deviceError } = await supabase
                 .from('user_devices')
                 .upsert(
-                    {
-                        device_fingerprint: deviceId,
-                        user_id: userId || null,
-                        device_type: deviceInfo.device_type,
-                        browser: deviceInfo.browser,
-                        os: deviceInfo.os,
-                        last_active_at: new Date().toISOString(),
-                    },
+                    updateData,
                     { onConflict: 'device_fingerprint' }
                 )
                 .select();
@@ -62,7 +87,6 @@ export const NotificationService = {
             return false;
         }
     },
-
     // Get device information
     async getDeviceInfo(): Promise<{
         device_type: string;
