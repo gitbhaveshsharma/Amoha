@@ -7,6 +7,7 @@ import SearchInput from "../ui/SearchInput";
 import { useRouter, usePathname } from "next/navigation";
 import DonationHeader from "./DonationHeader";
 import { supabase } from "@/lib/supabase";
+import { NotificationBell } from "../notifications/NotificationBell";
 
 const Navbar: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -141,7 +142,7 @@ const Navbar: React.FC = () => {
                             Upload
                         </Button>
                     </Link>
-
+                    <NotificationBell />
                     <Link
                         href="/favorites"
                         passHref
@@ -195,7 +196,7 @@ const Navbar: React.FC = () => {
                             Upload
                         </Button>
                     </Link>
-
+                    <NotificationBell />
                     <Link
                         href="/favorites"
                         passHref
