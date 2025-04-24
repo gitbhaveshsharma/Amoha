@@ -56,3 +56,41 @@ export type WishlistContextType = {
     isGuest: boolean;
     migrateGuestWishlist: () => Promise<void>;
 };
+
+
+
+export interface Ticket {
+    id: string;
+    user_id: string;
+    category_id: string;
+    priority_id: string;
+    subject: string;
+    description: string;
+    status: 'open' | 'in_progress' | 'resolved' | 'closed';
+    assignee_id?: string;
+    created_at: string;
+    updated_at: string;
+    comments?: Comment[];
+}
+
+export interface Comment {
+    id: string;
+    ticket_id: string;
+    user_id: string;
+    message: string;
+    is_internal: boolean;
+    created_at: string;
+}
+
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+
+export interface Comment {
+    id: string;
+    ticket_id: string;
+    user_id: string;
+    message: string;
+    is_internal: boolean;
+    created_at: string;
+    content: string;
+}
+
