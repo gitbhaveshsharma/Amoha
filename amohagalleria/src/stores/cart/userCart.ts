@@ -53,6 +53,20 @@ export const userCart: CartOperations = {
                 toast.success(newStatus === 'active' ? "Added to cart" : "Removed from cart");
                 return newStatus === 'active';
             } else {
+                // Check if a similar record already exists to avoid duplicates
+                const { data: duplicateCheck } = await supabase
+                    .from('cart')
+                    .select()
+                    .eq('user_id', user.id)
+                    .eq('artwork_id', artworkId)
+                    .eq('status', 'active')
+                    .maybeSingle();
+
+                if (duplicateCheck) {
+                    toast.info("Item is already in the cart");
+                    return true;
+                }
+
                 // Create new record
                 const { error } = await supabase
                     .from('cart')

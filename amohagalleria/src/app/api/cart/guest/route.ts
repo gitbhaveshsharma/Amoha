@@ -1,6 +1,7 @@
 // app/api/cart/guest/route.ts
 import { NextResponse } from 'next/server';
 import { getGuestCart, updateGuestCart, clearGuestCart } from '@/lib/server/redis';
+import { GuestNotificationService } from '@/lib/server/notifications/cart/guest/guestNotifications';
 
 export async function GET(request: Request) {
     try {
@@ -40,6 +41,11 @@ export async function POST(request: Request) {
 
             await updateGuestCart(deviceId, artworkId, newStatus);
 
+            // Only schedule notification if item was added (not removed)
+            if (newStatus === 'active') {
+                await GuestNotificationService.scheduleAbandonedCartNotification(deviceId, artworkId);
+            }
+
             return NextResponse.json({
                 success: true,
                 wasAdded: newStatus === 'active'
@@ -49,6 +55,13 @@ export async function POST(request: Request) {
         if (action === 'CLEAR') {
             await clearGuestCart(deviceId);
             return NextResponse.json({ success: true });
+        }
+
+        // Handle ADD action (if you have it)
+        if (action === 'ADD') {
+            await updateGuestCart(deviceId, artworkId, 'active');
+            await GuestNotificationService.scheduleAbandonedCartNotification(deviceId, artworkId);
+            return NextResponse.json({ success: true, wasAdded: true });
         }
 
         return NextResponse.json(

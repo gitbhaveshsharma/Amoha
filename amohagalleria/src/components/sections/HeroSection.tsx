@@ -5,9 +5,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 // import { useRouter } from 'next/navigation';
-// import { MakeOfferButton } from "@/components/make-offer-button";
+import { MakeOfferButton } from "@/components/make-offer-button";
 import { WishlistButton } from "@/components/WishlistButton";
 import { AddToCartButton } from "../addToCartButton";
+import { useOffer } from "@/context/offer-context";
 
 interface Artwork {
     id: string;
@@ -22,6 +23,7 @@ const HomeSection = () => {
     const [artworks, setArtworks] = useState<Artwork[]>([]);
     const [loading, setLoading] = useState(true);
     // const router = useRouter();
+    const { makeOffer, isLoading } = useOffer();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -77,6 +79,15 @@ const HomeSection = () => {
                                     ${artwork.artist_price.toFixed(2)}
                                 </p>
                                 <div className="flex gap-2">
+                                    <MakeOfferButton
+                                        artworkId={artwork.id}
+                                        artistId={artwork.artist_id}
+                                        currentPrice={artwork.artist_price}
+                                        makeOffer={makeOffer}
+                                        isLoading={isLoading}
+                                        size="sm"
+                                        amount={artwork.artist_price} // Pass the required 'amount' prop
+                                    />
                                     <WishlistButton artworkId={artwork.id} />
                                     <AddToCartButton artworkId={artwork.id} />
                                 </div>
