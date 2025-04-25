@@ -80,6 +80,8 @@ export interface Comment {
     message: string;
     is_internal: boolean;
     created_at: string;
+    user_avatar: string;
+    user_name: string;
 }
 
 export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
@@ -94,3 +96,35 @@ export interface Comment {
     content: string;
 }
 
+
+export interface ChatMessage {
+    id: string;
+    author_ref: string;
+    content: string;
+    created_at: string;
+    is_internal: boolean;
+    attachments?: Array<{
+        id: string;
+        url: string;
+        name: string;
+        type: string;
+        size: number;
+    }>;
+}
+
+export interface SupportChatState {
+    messages: ChatMessage[];
+    isLoading: boolean;
+    isSubmitting: boolean;
+    error: string | null;
+    currentFile: File | null;
+    fetchMessages: (ticketId: string) => Promise<void>;
+    sendMessage: (params: {
+        ticketId: string;
+        userId: string;
+        content: string;
+        file?: File | null;
+    }) => Promise<void>;
+    setFile: (file: File | null) => void;
+    clearMessages: () => void;
+}
