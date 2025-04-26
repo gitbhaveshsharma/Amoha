@@ -5,11 +5,12 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardLoader } from "@/components/dashboard/DashboardLoader";
 import { DashboardHome } from "@/components/dashboard/DashboardSections/DashboardHome";
 import { ProfileCard as ProfileSection } from "@/components/dashboard/DashboardSections/ProfileSection";
-import { WishlistSection } from "@/components/dashboard/DashboardSections/WishlistSection"; // Ensure this file exists or update the path
+import { WishlistSection } from "@/components/dashboard/DashboardSections/WishlistSection";
 import { BidsSection } from "@/components/dashboard/DashboardSections/BidsSection";
-import { UploadSection } from "@/components/dashboard/DashboardSections/UploadSection"; // Ensure this file exists at the specified path
+import { UploadSection } from "@/components/dashboard/DashboardSections/UploadSection";
 import { SupportSection } from "@/components/dashboard/DashboardSections/SupportSection";
 import { ArtworkSection } from "@/components/dashboard/DashboardSections/ArtworkSection";
+import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection"; // Fixed import path
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/dashboard/Sidebar";
 
@@ -20,7 +21,8 @@ type DashboardSection =
     | "support"
     | "profile"
     | "upload"
-    | "artworks";
+    | "artworks"
+    | "payouts"; // Make sure this type includes payouts
 
 interface ProfileData {
     id: string;
@@ -132,6 +134,8 @@ export default function DashboardPage() {
                 ) : null;
             case "artworks":
                 return <ArtworkSection />;
+            case "payouts":
+                return <ArtistPayoutSection />; // Add case for payouts section
             default:
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
         }
@@ -146,6 +150,7 @@ export default function DashboardPage() {
             case "support": return "Support Center";
             case "profile": return "My Profile";
             case "artworks": return "My Artworks";
+            case "payouts": return "Artist Payouts"; // Add title for payouts section
             default: return "Dashboard";
         }
     };
@@ -159,6 +164,7 @@ export default function DashboardPage() {
             case "support": return "Get help with your account";
             case "profile": return "View and edit your profile";
             case "artworks": return "View and manage your artworks";
+            case "payouts": return "Manage your earnings and payment methods"; // Add description for payouts section
             default: return "";
         }
     };

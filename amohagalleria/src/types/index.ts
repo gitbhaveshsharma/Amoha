@@ -128,3 +128,79 @@ export interface SupportChatState {
     setFile: (file: File | null) => void;
     clearMessages: () => void;
 }
+
+
+// Define the type of payout
+export type BalanceDisplayState = {
+    balance: number | null;
+    loading: boolean;
+    error: string | null;
+};
+
+export type BalanceDisplayActions = {
+    fetchBalance: () => Promise<void>;
+    reset: () => void;
+};
+
+export type BalanceDisplayStore = BalanceDisplayState & BalanceDisplayActions;
+
+export interface PaymentMethod {
+    id: string;
+    method_type: 'bank_account' | 'paypal' | 'stripe' | 'other';
+    details: {
+        bank_name?: string;
+        last4?: string;
+        email?: string;
+        [key: string]: string | number | boolean | undefined;
+    };
+    is_default: boolean;
+    is_verified: boolean;
+    created_at: string;
+}
+
+export type PaymentMethodState = {
+    paymentMethods: PaymentMethod[];
+    loading: boolean;
+    error: string | null;
+    success: boolean;
+};
+
+export type PaymentMethodActions = {
+    fetchPaymentMethods: () => Promise<void>;
+    addPaymentMethod: (method: Omit<PaymentMethod, 'id' | 'created_at'>) => Promise<void>;
+    setDefaultMethod: (id: string) => Promise<void>;
+    deleteMethod: (id: string) => Promise<void>;
+    reset: () => void;
+};
+
+export type PaymentMethodStore = PaymentMethodState & PaymentMethodActions;
+
+
+import { z } from "zod";
+
+export type PaymentMethodType = 'bank_account' | 'paypal' | 'stripe';
+
+export const paymentMethodSchemas = {
+    bank_account: z.object({
+        account_name: z.string().min(2),
+        account_number: z.string().min(4).max(17),
+        routing_number: z.string().length(9),
+        bank_name: z.string().min(2),
+    }),
+    paypal: z.object({
+        email: z.string().email(),
+    }),
+    stripe: z.object({
+        card_number: z.string().length(16),
+        expiry: z.string().regex(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/),
+        cvc: z.string().length(3),
+    })
+};
+
+export type PaymentMethodFormValues = {
+    method_type: PaymentMethodType;
+    is_default: boolean;
+    details: z.infer<typeof paymentMethodSchemas.bank_account> |
+    z.infer<typeof paymentMethodSchemas.paypal> |
+    z.infer<typeof paymentMethodSchemas.stripe>;
+};
