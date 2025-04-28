@@ -4,10 +4,43 @@ export interface Artwork {
     title: string;
     image_url: string;
     artist_price: number;
-    description?: string;
+    description: string;
     artist_id?: string;
     is_auction?: boolean;
     current_bid?: number | null;
+    error?: string | null;
+}
+
+export interface Artwork {
+    id: string;
+    title: string;
+    description: string;
+    image_url: string;
+    status: string;
+    dimensions: string;
+    date: string;
+    art_category: string;
+    medium: string;
+    art_location: string;
+    artist_price: number;
+    user_id: string;
+    created_at: string;
+    updated_at: string;
+    error?: string | null;
+}
+
+export interface ArtworkUpdate {
+    title?: string;
+    description?: string;
+    image_url?: string;
+    status?: string;
+    dimensions?: string;
+    date?: string;
+    art_category?: string;
+    medium?: string;
+    art_location?: string;
+    artist_price?: number;
+    error?: string | null;
 }
 
 export interface CartItem {
@@ -42,6 +75,22 @@ export interface MakeOffer {
     size?: "default" | "sm" | "lg";
     className?: string;
 }
+export interface Bid {
+    id: string;
+    artwork_id: string;
+    bidder_id: string;
+    amount: number;
+    status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+    is_auto_bid: boolean;
+    max_auto_bid: number | null;
+    message: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export type BidUpdate = Partial<
+    Pick<Bid, 'amount' | 'is_auto_bid' | 'max_auto_bid' | 'message'>
+>;
 
 export interface MakeOfferButtonProps extends MakeOffer {
     makeOffer: (offer: MakeOffer) => Promise<boolean>;
@@ -203,4 +252,77 @@ export type PaymentMethodFormValues = {
     details: z.infer<typeof paymentMethodSchemas.bank_account> |
     z.infer<typeof paymentMethodSchemas.paypal> |
     z.infer<typeof paymentMethodSchemas.stripe>;
+};
+
+
+export type PayoutRequestState = {
+    amount: number;
+    paymentMethodId: string;
+    availableBalance: number;
+    paymentMethods: PaymentMethod[];
+    loading: boolean;
+    submitting: boolean;
+    error: string | null;
+    success: boolean;
+};
+
+export type PayoutRequestActions = {
+    setAmount: (amount: number) => void;
+    setPaymentMethodId: (id: string) => void;
+    fetchPaymentMethods: () => Promise<void>;
+    submitRequest: () => Promise<void>;
+    reset: () => void;
+};
+
+export type PayoutRequestStore = PayoutRequestState & PayoutRequestActions;
+
+export type PayoutRequest = {
+    id: string;
+    artist_id: string;
+    amount: number;
+    payment_method_id: string;
+    currency: string;
+    status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+    processed_at?: string;
+    created_at: string;
+    updated_at: string;
+};
+export type PayoutHistoryFilters = {
+    status?: 'all' | 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+    dateRange?: {
+        from: Date;
+        to: Date;
+    };
+    amountRange?: {
+        min: number;
+        max: number;
+    };
+};
+
+export type PayoutHistoryState = {
+    payouts: PayoutRequest[];
+    filteredPayouts: PayoutRequest[];
+    loading: boolean;
+    error: string | null;
+    filters: PayoutHistoryFilters;
+};
+
+export type PayoutHistoryActions = {
+    fetchPayoutHistory: () => Promise<void>;
+    applyFilters: (filters: PayoutHistoryFilters) => void;
+    clearFilters: () => void;
+    exportToExcel: (payoutIds: string[]) => Promise<void>;
+};
+
+export type PayoutHistoryStore = PayoutHistoryState & PayoutHistoryActions;
+
+
+export type ExportFormat = 'excel' | 'csv' | 'json';
+
+export type ColumnDef<T> = {
+    id: string;
+    header: string;
+    accessor: (row: T) => any;
+    cell?: (value: ReturnType<ColumnDef<T>['accessor']>, row: T) => React.ReactNode;
+    width?: string;
 };

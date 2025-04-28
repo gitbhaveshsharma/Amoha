@@ -1,27 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useSession } from "@/hooks/useSession";
+import { useArtworkStore } from "@/stores/artwork/artworkStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/Button";
 import { EditArtworkModal } from "@/components/dashboard/EditArtworkModal";
 import { ImageIcon, Trash2 } from "lucide-react";
 import { DeleteConfirmationModal } from "@/components/dashboard/DeleteConfirmationModal";
-
-interface Artwork {
-    id: string;
-    title: string;
-    description: string;
-    image_url: string;
-    status: string;
-    dimensions: string;
-    date: string;
-    art_category: string;
-    medium: string;
-    art_location: string;
-    artist_price: number;
-}
+import { Skeleton } from "@/components/ui/skeleton";
+import { Artwork } from "@/types";
 
 const formatStatus = (status: string) => {
     return status
@@ -31,73 +20,43 @@ const formatStatus = (status: string) => {
 };
 
 export const ArtworkSection = () => {
-    const [artworks, setArtworks] = useState<Artwork[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [currentPage, setCurrentPage] = useState(1);
+    const { session } = useSession();
+    const {
+        artworks,
+        loading,
+        error,
+        currentPage,
+        itemsPerPage,
+        fetchUserArtworks,
+        deleteArtwork,
+        setCurrentPage,
+    } = useArtworkStore();
+
     const [editingArtwork, setEditingArtwork] = useState<Artwork | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [artworkToDelete, setArtworkToDelete] = useState<Artwork | null>(null);
-    const itemsPerPage = 8;
 
     useEffect(() => {
-        fetchArtworks();
-    }, []);
-
-    const fetchArtworks = async () => {
-        try {
-            setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) {
-                toast.error("User not authenticated");
-                setLoading(false);
-                return;
-            }
-
-            const { data, error } = await supabase
-                .from("artworks")
-                .select("*")
-                .eq("user_id", user.id)
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
-
-            setArtworks(data || []);
-        } catch (error: any) {
-            console.error("Error fetching artworks:", error);
-            toast.error("Failed to load artworks.");
-        } finally {
-            setLoading(false);
+        if (session?.user?.id) {
+            fetchUserArtworks(session.user.id);
         }
-    };
-
-    const handleEditClick = (artwork: Artwork) => {
-        setEditingArtwork(artwork);
-        setIsEditModalOpen(true);
-    };
+    }, [session?.user?.id, fetchUserArtworks]);
 
     const handleArtworkUpdated = () => {
         toast.success("Artwork updated successfully!");
-        fetchArtworks();
+        if (session?.user?.id) {
+            fetchUserArtworks(session.user.id);
+        }
         setIsEditModalOpen(false);
     };
 
     const handleDeleteArtwork = async () => {
         if (!artworkToDelete) return;
-
         try {
-            const { error } = await supabase
-                .from("artworks")
-                .delete()
-                .eq("id", artworkToDelete.id);
-
-            if (error) throw error;
-
+            await deleteArtwork(artworkToDelete.id);
             toast.success("Artwork deleted successfully!");
-            fetchArtworks();
-        } catch (error: any) {
-            console.error("Error deleting artwork:", error);
+        } catch {
             toast.error("Failed to delete artwork.");
         } finally {
             setIsDeleteModalOpen(false);
@@ -123,12 +82,27 @@ export const ArtworkSection = () => {
         }
     };
 
-    if (loading) {
-        return <p className="text-center">Loading artworks...</p>;
+    if (loading && artworks.length === 0) {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6">
+                {[...Array(8)].map((_, i) => (
+                    <Skeleton key={i} className="h-80 w-full rounded-lg" />
+                ))}
+            </div>
+        );
+    }
+
+    if (error) {
+        return <p className="text-center text-red-500 py-8">{error}</p>;
     }
 
     if (artworks.length === 0) {
-        return <p className="text-center">No artworks found.</p>;
+        return <p className="text-center py-8">No artworks found.</p>;
+    }
+
+    function handleEditClick(artwork: Artwork): void {
+        setIsEditModalOpen(true);
+        setEditingArtwork(artwork);
     }
 
     return (
@@ -159,78 +133,79 @@ export const ArtworkSection = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {currentArtworks.map((artwork) => (
                             <div key={artwork.id} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                <div className="relative">
-                                    {artwork.image_url ? (
-                                        <img
-                                            src={artwork.image_url}
-                                            alt={artwork.title}
-                                            className="w-full h-48 object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                                            <ImageIcon className="h-12 w-12 text-gray-400" />
-                                        </div>
-                                    )}
-                                    <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                                        {artwork.art_category}
-                                    </div>
-                                </div>
-                                <div className="p-4 space-y-2">
-                                    <div className="flex justify-between items-start">
-                                        <h3 className="text-lg font-semibold line-clamp-1">{artwork.title}</h3>
-                                        <div className="flex gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-sm p-2"
-                                                onClick={() => handleEditClick(artwork)}
-                                            >
-                                                Edit
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-sm p-2 text-red-600 hover:text-red-800"
-                                                onClick={() => {
-                                                    setArtworkToDelete(artwork);
-                                                    setIsDeleteModalOpen(true);
-                                                }}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    <p className="text-sm text-muted-foreground line-clamp-2">
-                                        {artwork.description}
-                                    </p>
-
-                                    <div className="flex flex-wrap gap-1 pt-1">
-                                        <span className="bg-gray-100 px-2 py-1 rounded-full text-xs">
-                                            {artwork.medium}
-                                        </span>
-                                        <span className="bg-gray-100 px-2 py-1 rounded-full text-xs">
-                                            {artwork.dimensions}
-                                        </span>
-                                        {artwork.date && (
-                                            <span className="bg-gray-100 px-2 py-1 rounded-full text-xs">
-                                                {new Date(artwork.date).getFullYear()}
-                                            </span>
+                                <div key={artwork.id} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="relative">
+                                        {artwork.image_url ? (
+                                            <img
+                                                src={artwork.image_url}
+                                                alt={artwork.title}
+                                                className="w-full h-48 object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
+                                                <ImageIcon className="h-12 w-12 text-gray-400" />
+                                            </div>
                                         )}
+                                        <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
+                                            {artwork.art_category}
+                                        </div>
                                     </div>
+                                    <div className="p-4 space-y-2">
+                                        <div className="flex justify-between items-start">
+                                            <h3 className="text-lg font-semibold line-clamp-1">{artwork.title}</h3>
+                                            <div className="flex gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-sm p-2"
+                                                    onClick={() => handleEditClick(artwork)}
+                                                >
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-sm p-2 text-red-600 hover:text-red-800"
+                                                    onClick={() => {
+                                                        setArtworkToDelete(artwork);
+                                                        setIsDeleteModalOpen(true);
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
 
-                                    <div className="flex justify-between items-center pt-2">
-                                        <p className="text-sm text-muted-foreground">
-                                            Status: <span className="font-medium">{formatStatus(artwork.status)}</span>
+                                        <p className="text-sm text-muted-foreground line-clamp-2">
+                                            {artwork.description}
                                         </p>
-                                        {artwork.artist_price && (
-                                            <p className="text-sm font-medium">
-                                                ${artwork.artist_price.toFixed(2)}
+
+                                        <div className="flex flex-wrap gap-1 pt-1">
+                                            <span className="bg-gray-100 px-2 py-1 rounded-full text-xs">
+                                                {artwork.medium}
+                                            </span>
+                                            <span className="bg-gray-100 px-2 py-1 rounded-full text-xs">
+                                                {artwork.dimensions}
+                                            </span>
+                                            {artwork.date && (
+                                                <span className="bg-gray-100 px-2 py-1 rounded-full text-xs">
+                                                    {new Date(artwork.date).getFullYear()}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex justify-between items-center pt-2">
+                                            <p className="text-sm text-muted-foreground">
+                                                Status: <span className="font-medium">{formatStatus(artwork.status)}</span>
                                             </p>
-                                        )}
+                                            {artwork.artist_price && (
+                                                <p className="text-sm font-medium">
+                                                    ${artwork.artist_price.toFixed(2)}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                </div>                            </div>
                         ))}
                     </div>
 
