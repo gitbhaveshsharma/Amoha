@@ -4,15 +4,16 @@ import { useRouter } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardLoader } from "@/components/dashboard/DashboardLoader";
 import { DashboardHome } from "@/components/dashboard/DashboardSections/DashboardHome";
-import { ProfileCard as ProfileSection } from "@/components/dashboard/DashboardSections/ProfileSection";
+import { ProfileSection } from "@/components/dashboard/DashboardSections/ProfileSection";
 import { WishlistSection } from "@/components/dashboard/DashboardSections/WishlistSection";
 import { BidsSection } from "@/components/dashboard/DashboardSections/BidsSection";
 import { UploadSection } from "@/components/dashboard/DashboardSections/UploadSection";
 import { SupportSection } from "@/components/dashboard/DashboardSections/SupportSection";
 import { ArtworkSection } from "@/components/dashboard/DashboardSections/ArtworkSection";
-import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection"; // Fixed import path
+import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/dashboard/Sidebar";
+import { ProfileData } from "@/types/profile"; // Import ProfileData type
 
 type DashboardSection =
     | "dashboard"
@@ -23,18 +24,6 @@ type DashboardSection =
     | "upload"
     | "artworks"
     | "payouts"; // Make sure this type includes payouts
-
-interface ProfileData {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    created_at: string;
-    avatar_url?: string;
-    user_id: string;
-    bio?: string;
-    address?: string;
-}
 
 export default function DashboardPage() {
     const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -119,23 +108,19 @@ export default function DashboardPage() {
                 return <BidsSection />;
             case "upload":
                 return (
-                    <UploadSection
-
-                    />
+                    <UploadSection />
                 );
             case "support":
                 return <SupportSection />;
             case "profile":
-                return profile ? (
-                    <ProfileSection
-                        profile={profile}
-                        onUpdate={(updatedProfile) => setProfile(updatedProfile)}
-                    />
-                ) : null;
+                return <ProfileSection
+                    profile={profile}
+                    onProfileUpdate={(updatedProfile: ProfileData) => setProfile(updatedProfile)}
+                />;
             case "artworks":
                 return <ArtworkSection />;
             case "payouts":
-                return <ArtistPayoutSection />; // Add case for payouts section
+                return <ArtistPayoutSection />;
             default:
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
         }
