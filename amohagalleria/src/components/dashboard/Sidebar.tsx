@@ -8,10 +8,11 @@ import {
     User,
     X,
     UploadCloud,
-    ImageIcon
+    ImageIcon,
+    Wallet,
 } from "lucide-react";
 
-type DashboardSection = "dashboard" | "wishlist" | "bids" | "support" | "profile" | "artworks";
+type DashboardSection = "dashboard" | "wishlist" | "bids" | "support" | "profile" | "upload" | "artworks" | "payouts";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -26,6 +27,7 @@ const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection }: SidebarPr
         { label: "Wishlist", value: "wishlist", icon: Heart },
         { label: "Bids", value: "bids", icon: Gavel },
         { label: "Upload", value: "upload", icon: UploadCloud },
+        { label: "Payouts", value: "payouts", icon: Wallet },
         { label: "Support", value: "support", icon: LifeBuoy },
         { label: "Profile", value: "profile", icon: User },
         { label: "Artworks", value: "artworks", icon: ImageIcon },
