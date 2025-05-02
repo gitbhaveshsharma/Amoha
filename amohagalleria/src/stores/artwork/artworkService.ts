@@ -43,5 +43,18 @@ export const artworkService = {
         if (error) {
             throw new Error(`Failed to delete artwork: ${error.message}`);
         }
+    },
+    // Fetch artworks by a list of IDs
+    async getArtworksByIds(artworkIds: string[]): Promise<Artwork[]> {
+        const { data, error } = await supabase
+            .from('artworks')
+            .select('*')
+            .in('id', artworkIds);
+
+        if (error) {
+            throw new Error(`Failed to fetch artworks by IDs: ${error.message}`);
+        }
+
+        return data as Artwork[];
     }
 };

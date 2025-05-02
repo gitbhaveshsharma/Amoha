@@ -13,7 +13,7 @@ export const userCart: CartOperations = {
                 .from('cart')
                 .select('artwork_id')
                 .eq('user_id', user.id)
-                .eq('status', 'active');
+                .eq('status', 'active');  // Only fetch active cart items
 
             if (error) throw error;
             return data?.map(item => item.artwork_id) || [];
@@ -29,7 +29,7 @@ export const userCart: CartOperations = {
         if (!user) throw new Error('User not authenticated');
 
         try {
-            // First check if the item exists
+            // Check for any existing cart record (regardless of status)
             const { data: existing } = await supabase
                 .from('cart')
                 .select()
@@ -38,7 +38,7 @@ export const userCart: CartOperations = {
                 .maybeSingle();
 
             if (existing) {
-                // Toggle the status
+                // Toggle between active/removed status
                 const newStatus = existing.status === 'active' ? 'removed' : 'active';
                 const { error } = await supabase
                     .from('cart')
@@ -46,42 +46,27 @@ export const userCart: CartOperations = {
                         status: newStatus,
                         updated_at: new Date().toISOString(),
                     })
-                    .eq('user_id', user.id)
-                    .eq('artwork_id', artworkId);
+                    .eq('id', existing.id);
 
                 if (error) throw error;
                 toast.success(newStatus === 'active' ? "Added to cart" : "Removed from cart");
                 return newStatus === 'active';
-            } else {
-                // Check if a similar record already exists to avoid duplicates
-                const { data: duplicateCheck } = await supabase
-                    .from('cart')
-                    .select()
-                    .eq('user_id', user.id)
-                    .eq('artwork_id', artworkId)
-                    .eq('status', 'active')
-                    .maybeSingle();
-
-                if (duplicateCheck) {
-                    toast.info("Item is already in the cart");
-                    return true;
-                }
-
-                // Create new record
-                const { error } = await supabase
-                    .from('cart')
-                    .insert({
-                        user_id: user.id,
-                        artwork_id: artworkId,
-                        status: 'active',
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                    });
-
-                if (error) throw error;
-                toast.success("Added to cart");
-                return true;
             }
+
+            // Create new active cart item
+            const { error } = await supabase
+                .from('cart')
+                .insert({
+                    user_id: user.id,
+                    artwork_id: artworkId,
+                    status: 'active',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                });
+
+            if (error) throw error;
+            toast.success("Added to cart");
+            return true;
         } catch (error) {
             console.error("Failed to toggle cart item:", error);
             toast.error("Failed to update cart");
@@ -101,7 +86,7 @@ export const userCart: CartOperations = {
                     updated_at: new Date().toISOString(),
                 })
                 .eq('user_id', user.id)
-                .eq('status', 'active');
+                .eq('status', 'active');  // Only mark active items as removed
 
             if (error) throw error;
             toast.success("Cart cleared");

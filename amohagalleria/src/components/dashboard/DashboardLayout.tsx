@@ -24,17 +24,15 @@ export function DashboardLayout({
             <Sidebar
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
-                activeSection="defaultSection" // Replace with the appropriate default section
-                setActiveSection={(section) => console.log(section)} // Replace with the actual handler
+                activeSection="dashboard"
+                setActiveSection={(section) => console.log(section)}
             />
 
             <div className={cn(
                 "flex-1 transition-all duration-300 ease-in-out",
                 sidebarOpen ? "md:ml-64" : "ml-0"
             )}>
-                <div className="p-4 md:p-4">
-                    {children}
-                </div>
+                {children}
             </div>
         </div>
     );

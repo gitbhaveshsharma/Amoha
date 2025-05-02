@@ -6,19 +6,18 @@ import { toast } from "sonner";
 import { ProfileData } from "@/types/profile"; // Add import for ProfileData type
 
 interface ProfileSectionProps {
-
     profile?: ProfileData | null;
     onProfileUpdate?: (updatedProfile: ProfileData) => void;
 }
 
 export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps = {}) {
     const { session } = useSession();
-    const { fetchProfile, loading, error } = useProfileStore();
+    const { fetchProfile, loading, error, profile: storeProfile } = useProfileStore();
     const [fetchAttempted, setFetchAttempted] = useState(false);
 
     useEffect(() => {
         const loadProfile = async () => {
-            if (session?.user.id) {
+            if (session?.user.id && !storeProfile) {
                 try {
                     await fetchProfile(session.user.id);
                 } catch (err) {
@@ -39,7 +38,7 @@ export function ProfileSection({ profile, onProfileUpdate }: ProfileSectionProps
         };
 
         loadProfile();
-    }, [session?.user.id, fetchProfile, profile]);
+    }, [session?.user.id, fetchProfile, profile, storeProfile]);
 
     // If we're loading and haven't attempted a fetch yet
     if (loading && !fetchAttempted) {

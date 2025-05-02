@@ -38,6 +38,21 @@ export const useArtworkStore = create<ArtworkState>((set) => ({
         }
     },
 
+    // Fetch artworks by a list of IDs
+    fetchArtworksByIds: async (artworkIds: string[]) => {
+        set({ loading: true, error: null });
+        try {
+            const fetchedArtworks = await artworkService.getArtworksByIds(artworkIds);
+            set({
+                artworks: fetchedArtworks,
+                loading: false
+            });
+        } catch (err) {
+            console.error('Error in fetchArtworksByIds:', err);
+            set({ error: 'Failed to fetch artworks', loading: false });
+        }
+    },
+
     // Update an artwork
     updateArtwork: async (artworkId: string, updateData: ArtworkUpdate) => {
         set({ loading: true, error: null });
