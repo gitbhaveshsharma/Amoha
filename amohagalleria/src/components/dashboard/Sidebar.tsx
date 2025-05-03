@@ -2,7 +2,6 @@
 import { cn } from "@/lib/utils";
 import {
     LayoutDashboard,
-    Heart,
     Gavel,
     LifeBuoy,
     User,
@@ -10,10 +9,11 @@ import {
     UploadCloud,
     ImageIcon,
     Wallet,
+    DollarSign, // Import icon for "sale"
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton"; // Make sure you have this component
 
-type DashboardSection = "dashboard" | "wishlist" | "bids" | "support" | "profile" | "upload" | "artworks" | "payouts";
+type DashboardSection = "dashboard" | "bids" | "support" | "profile" | "upload" | "artworks" | "payouts" | "sale";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -27,13 +27,13 @@ const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading =
     const currentYear = 2023; // Replace dynamic `new Date()` with a static value for SSR consistency
     const sections = [
         { label: "Dashboard", value: "dashboard", icon: LayoutDashboard },
-        { label: "Wishlist", value: "wishlist", icon: Heart },
         { label: "Bids", value: "bids", icon: Gavel },
         { label: "Upload", value: "upload", icon: UploadCloud },
         { label: "Payouts", value: "payouts", icon: Wallet },
         { label: "Support", value: "support", icon: LifeBuoy },
         { label: "Profile", value: "profile", icon: User },
         { label: "Artworks", value: "artworks", icon: ImageIcon },
+        { label: "Sales", value: "sale", icon: DollarSign }, // Added "sale" section
     ];
 
     return (

@@ -10,11 +10,13 @@ import { UploadSection } from "@/components/dashboard/DashboardSections/UploadSe
 import { SupportSection } from "@/components/dashboard/DashboardSections/SupportSection";
 import { ArtworkSection } from "@/components/dashboard/DashboardSections/ArtworkSection";
 import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection";
-import { CartSection } from "@/components/dashboard/DashboardSections/CartSection"; // Import CartSection
+import { CartSection } from "@/components/dashboard/DashboardSections/CartSection";
+import { SaleSection } from "@/components/dashboard/DashboardSections/SaleSection";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { useProfileStore } from "@/stores/profile/profileStore";
 import { Skeleton } from "@/components/ui/skeleton";
+
 
 type DashboardSection =
     | "dashboard"
@@ -25,7 +27,8 @@ type DashboardSection =
     | "upload"
     | "artworks"
     | "payouts"
-    | "cart"; // Added "cart" section
+    | "cart"
+    | "sale"; // Added "sale" section
 
 export default function DashboardPage() {
     const [authChecked, setAuthChecked] = useState(false);
@@ -112,9 +115,15 @@ export default function DashboardPage() {
                 return <ArtistPayoutSection />;
             case "cart":
                 return <CartSection />;
+            case "sale": // Added case for "sale"
+                return <SaleSection />;
             default:
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
         }
+    };
+
+    const handleWishlistClick = () => {
+        setActiveSection("wishlist"); // Navigate to wishlist section
     };
 
     const getSectionTitle = () => {
@@ -127,7 +136,8 @@ export default function DashboardPage() {
             case "profile": return "My Profile";
             case "artworks": return "My Artworks";
             case "payouts": return "Artist Payouts";
-            case "cart": return "My Cart"; // Added title for "cart"
+            case "cart": return "My Cart";
+            case "sale": return "My Sales"; // Added title for "sale"
             default: return "Dashboard";
         }
     };
@@ -142,7 +152,8 @@ export default function DashboardPage() {
             case "profile": return "View and edit your profile";
             case "artworks": return "View and manage your artworks";
             case "payouts": return "Manage your earnings and payment methods";
-            case "cart": return "Review and manage items in your cart"; // Added description for "cart"
+            case "cart": return "Review and manage items in your cart";
+            case "sale": return "Track and manage your sales"; // Added description for "sale"
             default: return "";
         }
     };
@@ -167,7 +178,10 @@ export default function DashboardPage() {
                     onProfileClick={() => setActiveSection("profile")}
                     onSignOut={handleSignOut}
                     loading={!authChecked || profileLoading}
-                    onCartClick={() => setActiveSection("cart")} // Added cart button handler
+                    onCartClick={() => setActiveSection("cart")}
+                    onWishlistClick={handleWishlistClick}
+                    wishlistCount={5}
+                    activeSection={activeSection}
                 />
 
                 {/* Main content - padding can be handled by individual sections */}

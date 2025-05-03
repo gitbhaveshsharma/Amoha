@@ -7,6 +7,19 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { NotificationBell } from "../notifications/NotificationBell";
+import { cn } from "@/lib/utils";
+
+type DashboardSection =
+    | "dashboard"
+    | "wishlist"
+    | "bids"
+    | "support"
+    | "profile"
+    | "upload"
+    | "artworks"
+    | "payouts"
+    | "cart"
+    | "sale";
 
 interface DashboardHeaderProps {
     title: string;
@@ -18,11 +31,13 @@ interface DashboardHeaderProps {
     onMenuToggle: () => void;
     onProfileClick: () => void;
     onCartClick?: () => void;
+    onWishlistClick?: () => void;
     onSignOut: () => void;
     loading?: boolean;
     cartCount?: number;
     wishlistCount?: number;
     notificationsLoading?: boolean;
+    activeSection?: DashboardSection;
 }
 
 export function DashboardHeader({
@@ -32,14 +47,15 @@ export function DashboardHeader({
     onMenuToggle,
     onProfileClick,
     onCartClick,
+    onWishlistClick,
     onSignOut,
     loading = false,
     cartCount = 0,
-    wishlistCount = 0,
     notificationsLoading = false,
+    activeSection,
 }: DashboardHeaderProps) {
     return (
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4 shadow-sm">
+        <div className="sticky top-0 z-50 bg-white border-b border-gray-200 p-4 shadow-sm dark:bg-gray-900 dark:border-gray-800">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 {/* Left Section */}
                 <div className="flex items-center gap-4">
@@ -49,7 +65,7 @@ export function DashboardHeader({
                         <Button
                             variant="ghost"
                             onClick={onMenuToggle}
-                            className="p-2 rounded-lg"
+                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                             aria-label="Toggle sidebar"
                         >
                             <Menu className="h-6 w-6" />
@@ -59,28 +75,28 @@ export function DashboardHeader({
                     <div>
                         {loading ? (
                             <div className="space-y-2">
-                                <Skeleton className="h-6 w-48" />
-                                <Skeleton className="h-4 w-64" />
+                                <Skeleton className="h-6 w-48 dark:bg-gray-800" />
+                                <Skeleton className="h-4 w-64 dark:bg-gray-800" />
                             </div>
                         ) : (
                             <>
-                                <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
-                                <p className="text-sm text-gray-500">{description}</p>
+                                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{title}</h1>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
                             </>
                         )}
                     </div>
                 </div>
 
                 {/* Right Section */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                     {/* Home Button */}
                     {loading ? (
-                        <Skeleton className="h-10 w-10 rounded-lg" />
+                        <Skeleton className="h-10 w-10 rounded-lg dark:bg-gray-800" />
                     ) : (
                         <Link href="/" passHref>
                             <Button
-                                variant="ghost"
-                                className="p-2 rounded-lg"
+                                variant="outline"
+                                className="relative p-2 rounded-lg hover:bg-[#a35339]/10 hover:text-[#a35339] text-gray-600 dark:hover:bg-[#a35339]/20"
                                 aria-label="Go to home"
                             >
                                 <Home className="h-6 w-6" />
@@ -91,26 +107,37 @@ export function DashboardHeader({
 
                     {/* Wishlist Button */}
                     {loading ? (
-                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <Skeleton className="h-10 w-10 rounded-full dark:bg-gray-800" />
                     ) : (
-                        <Button variant="outline" className="relative p-2 rounded-full">
-                            <Heart className="h-5 w-5" />
-                            {wishlistCount > 0 && (
-                                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0">
-                                    {wishlistCount}
-                                </Badge>
+                        <Button
+                            variant="outline"
+                            className={cn(
+                                "relative p-2 rounded-lg hover:bg-[#a35339]/10 hover:text-[#a35339] dark:hover:bg-[#a35339]/20",
+                                activeSection === 'wishlist'
+                                    ? "bg-[#a35339]/20 text-[#a35339] dark:bg-[#a35339]/30"
+                                    : "text-gray-600 dark:text-gray-400"
                             )}
-                            <span className="hidden md:inline">Wishlist</span>
+                            onClick={onWishlistClick}
+                        >
+                            <Heart className="h-5 w-5" />
+
+                            <span className="hidden md:inline ml-2">Wishlist</span>
+
                         </Button>
                     )}
 
                     {/* Cart Button */}
                     {loading ? (
-                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <Skeleton className="h-10 w-10 rounded-full dark:bg-gray-800" />
                     ) : (
                         <Button
                             variant="outline"
-                            className="relative p-2 rounded-full"
+                            className={cn(
+                                "relative p-2 rounded-lg hover:bg-[#a35339]/10 hover:text-[#a35339] dark:hover:bg-[#a35339]/20",
+                                activeSection === 'cart'
+                                    ? "bg-[#a35339]/20 text-[#a35339] dark:bg-[#a35339]/30"
+                                    : "text-gray-600 dark:text-gray-400"
+                            )}
                             onClick={onCartClick}
                         >
                             <ShoppingCart className="h-5 w-5" />
@@ -119,17 +146,19 @@ export function DashboardHeader({
                                     {cartCount}
                                 </Badge>
                             )}
-                            <span className="hidden md:inline">Cart</span>
+                            <span className="hidden md:inline ml-2">Cart</span>
+
                         </Button>
                     )}
 
                     {/* Notification Button */}
                     {loading || notificationsLoading ? (
-                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <Skeleton className="h-10 w-10 rounded-full dark:bg-gray-800" />
                     ) : (
                         <NotificationBell />
                     )}
 
+                    {/* Profile Dropdown */}
                     {/* Profile Dropdown */}
                     {loading ? (
                         <div className="flex items-center gap-2">
@@ -139,7 +168,7 @@ export function DashboardHeader({
                     ) : (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="flex items-center rounded-full" style={{ paddingInline: "inherit" }}>
+                                <Button variant="outline" className="flex items-center rounded-full  hover:bg-[#a35339]/10 hover:text-[#a35339] text-gray-600 dark:hover:bg-[#a35339]/20" style={{ paddingInline: "inherit" }}>
                                     <Avatar>
                                         <AvatarImage src={profile?.avatar_url ?? ""} />
                                         <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">

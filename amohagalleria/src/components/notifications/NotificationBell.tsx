@@ -28,7 +28,7 @@ export function NotificationBell() {
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="relative">
+                <Button variant="outline" size="icon" className="relative hover:bg-[#a35339]/10 hover:text-[#a35339] text-gray-600 dark:hover:bg-[#a35339]/20">
                     {unreadCount > 0 ? (
                         <BellRing className="h-5 w-5" />
                     ) : (
