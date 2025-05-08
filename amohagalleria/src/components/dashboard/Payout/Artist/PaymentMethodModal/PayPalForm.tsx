@@ -1,3 +1,4 @@
+// src/components/PaymentMethodModal/PayPalForm.tsx
 import React from "react";
 import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,14 @@ export const PayPalForm = () => {
                     <FormItem>
                         <Label>PayPal Email</Label>
                         <FormControl>
-                            <Input {...field} type="email" />
+                            <Input 
+                                {...field} 
+                                type="email" 
+                                placeholder="example@paypal.com" 
+                                autoComplete="email"
+                                inputMode="email"
+                                onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                            />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -24,7 +32,8 @@ export const PayPalForm = () => {
             />
 
             <p className="text-sm text-muted-foreground">
-                We will send payments to this PayPal email address
+                We will send payments to this PayPal email address. 
+                You may need to verify this email with PayPal.
             </p>
         </div>
     );

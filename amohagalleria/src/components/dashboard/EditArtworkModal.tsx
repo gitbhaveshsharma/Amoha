@@ -1,126 +1,123 @@
-// src/components/EditArtworkModal.tsx
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ImageIcon, UploadCloud } from "lucide-react";
-import { toast } from "react-toastify";
-import { supabase } from "@/lib/supabase";
+import { ImageIcon, X, Loader2 } from "lucide-react";
+import { useSession } from "@/hooks/useSession";
 import { Button } from "@/components/ui/Button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Image from "next/image";
+import { CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArtCategorySelect } from "@/components/ArtCategorySelect";
 import { Textarea } from "@/components/ui/textarea";
-import { artworkFormSchema, ArtworkFormValues } from "@/schemas/artwork";
+import { artworkFormSchema } from "@/schemas/artwork";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CurrencyCode } from "@/types/currency";
+import { useCurrencyStore } from "@/stores/currency/currencyStore";
+import { ArtworkFormValues } from "@/schemas/artwork";
+import { useArtworkStore } from "@/stores/artwork/artworkStore";
+import { toast } from "react-toastify";
+import { Artwork } from "@/types";
 
 interface EditArtworkModalProps {
-    artwork: {
-        id: string;
-        title: string;
-        art_category: string;
-        art_location: string;
-        artist_price: number;
-        description: string;
-        medium: string;
-        dimensions: string;
-        date: string;
-        image_url: string;
-    };
+    artwork: Artwork;
     isOpen: boolean;
     onClose: () => void;
     onArtworkUpdated: () => void;
 }
 
-export const EditArtworkModal = ({ artwork, isOpen, onClose, onArtworkUpdated }: EditArtworkModalProps) => {
+export const EditArtworkModal = ({
+    artwork,
+    isOpen,
+    onClose,
+    onArtworkUpdated,
+}: EditArtworkModalProps) => {
+    const { session } = useSession();
+    const { updateArtwork } = useArtworkStore();
+    const [previewUrl, setPreviewUrl] = useState<string | null>(artwork.image_url || null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(artwork?.image_url || null);
-    const [isImageChanged, setIsImageChanged] = useState(false);
+    const [newImageFile, setNewImageFile] = useState<File | null>(null);
+    const { currencies, fetchCurrencies } = useCurrencyStore();
 
     const form = useForm<ArtworkFormValues>({
         resolver: zodResolver(artworkFormSchema),
+        mode: "onChange",
         defaultValues: {
             title: artwork.title,
             art_category: artwork.art_category,
             art_location: artwork.art_location,
-            artist_price: artwork.artist_price.toString(),
+            artist_price: artwork.artist_price?.toString() || "",
             description: artwork.description,
             medium: artwork.medium,
             dimensions: artwork.dimensions,
-            date: artwork.date,
-            image: undefined, // Initialize image as undefined
+            date: artwork.date ? new Date(artwork.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            currency: artwork.currency || "USD",
+            image: undefined as unknown as FileList,
         },
-    });
+    }) as unknown as ReturnType<typeof useForm<ArtworkFormValues>>;
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                handleClose();
+            }
+        };
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, []);
+
+    useEffect(() => {
+        if (currencies.length === 0) {
+            fetchCurrencies();
+        }
+    }, [currencies.length, fetchCurrencies]);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Reset form state with the new artwork data when modal opens
+            form.reset({
+                title: artwork.title,
+                art_category: artwork.art_category,
+                art_location: artwork.art_location,
+                artist_price: artwork.artist_price?.toString() || "",
+                description: artwork.description,
+                medium: artwork.medium,
+                dimensions: artwork.dimensions,
+                date: artwork.date ? new Date(artwork.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                currency: artwork.currency || "USD",
+                image: undefined as unknown as FileList,
+            });
+            setPreviewUrl(artwork.image_url || null);
+            setNewImageFile(null);
+        }
+    }, [artwork, isOpen]); // Trigger when artwork or modal state changes
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const url = URL.createObjectURL(file);
-            setPreviewUrl(url);
-            form.setValue("image", e.target.files);
-            setIsImageChanged(true);
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            setNewImageFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+            form.setValue("image", files, { shouldValidate: true });
+            form.clearErrors("image");
         }
     };
 
+    const handleClose = () => {
+        setPreviewUrl(artwork.image_url || null);
+        setNewImageFile(null);
+        form.reset();
+        onClose();
+    };
+
     const onSubmit = async (values: ArtworkFormValues) => {
+        if (!session?.user?.id) return;
+
         setIsSubmitting(true);
-
         try {
-            // 1. Get current user
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("User not authenticated");
-
-            let imageUrl = artwork.image_url;
-
-            // 2. Only handle image if it was changed
-            if (isImageChanged && values.image) {
-                // Upload new image
-                const imageFile = values.image[0];
-                const fileExt = imageFile.name.split('.').pop();
-                const fileName = `${Math.random()}.${fileExt}`;
-                const filePath = `${fileName}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('artwork-uploads')
-                    .upload(filePath, imageFile, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
-
-                if (uploadError) throw uploadError;
-
-                // Get public URL of the uploaded image
-                const { data: { publicUrl } } = supabase
-                    .storage
-                    .from('artwork-uploads')
-                    .getPublicUrl(filePath);
-
-                imageUrl = publicUrl;
-
-                // Delete old image only after new image is successfully uploaded
-                if (artwork.image_url) {
-                    const oldFileName = artwork.image_url.split('/').pop();
-                    if (oldFileName) {
-                        await supabase.storage
-                            .from('artwork-uploads')
-                            .remove([oldFileName]);
-                    }
-                }
-            }
-
-            // 3. Update artwork data in database
-            const updateData: {
-                title: string;
-                art_category: string;
-                art_location: string;
-                artist_price: number;
-                description: string;
-                medium: string;
-                dimensions: string;
-                date: string;
-                status: string;
-                image_url?: string; // Add optional image_url property
-            } = {
+            const updateData = {
                 title: values.title,
                 art_category: values.art_category,
                 art_location: values.art_location,
@@ -129,251 +126,335 @@ export const EditArtworkModal = ({ artwork, isOpen, onClose, onArtworkUpdated }:
                 medium: values.medium,
                 dimensions: values.dimensions,
                 date: values.date,
-                status: 'pending_review', // Set back to pending review after edit
+                currency: values.currency,
+                ...(newImageFile && { image: newImageFile }), // Include image only if changed
             };
 
-            // Only include image_url in update if it was changed
-            if (isImageChanged) {
-                updateData.image_url = imageUrl;
-            }
-
-            const { error: dbError } = await supabase
-                .from('artworks')
-                .update(updateData)
-                .eq('id', artwork.id);
-
-            if (dbError) throw dbError;
-
-            // 4. Show success and close modal
-            toast.success("Artwork updated successfully!");
+            await updateArtwork(artwork.id, updateData);
+            // toast.success("Artwork updated successfully!");
             onArtworkUpdated();
-            onClose();
-
-        } catch (error: any) {
-            console.error("Error updating artwork:", error);
-            toast.error(error.message || "Error updating artwork. Please try again.");
+            handleClose();
+        } catch (error) {
+            console.error("Update failed:", error);
+            toast.error("Failed to update artwork. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    if (!artwork) return null;
+    if (!isOpen) return null;
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="text-2xl">Edit Artwork</DialogTitle>
-                    {/* <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                        onClick={onClose}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button> */}
-                </DialogHeader>
+        <div
+            key={artwork.id} // Ensure React reinitializes the modal when artwork changes
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 overflow-y-auto"
+        >
+            <div className="fixed inset-0 dark:bg-gray-800 bg-opacity-90 transition-opacity" onClick={handleClose}></div>
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Left Column - Image Upload */}
-                        <div className="space-y-6">
-                            <FormField
-                                control={form.control}
-                                name="image"
-                                render={() => (
-                                    <FormItem>
-                                        <FormLabel>Artwork Image</FormLabel>
-                                        <FormControl>
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-center w-full">
-                                                    <label
-                                                        htmlFor="dropzone-file"
-                                                        className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted"
-                                                    >
-                                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                            {previewUrl ? (
-                                                                <img
-                                                                    src={previewUrl}
-                                                                    alt="Preview"
-                                                                    className="max-h-52 max-w-full object-contain rounded-md"
-                                                                />
-                                                            ) : (
-                                                                <>
-                                                                    <ImageIcon className="w-10 h-10 mb-3 text-muted-foreground" />
-                                                                    <p className="mb-2 text-sm text-muted-foreground">
-                                                                        <span className="font-semibold">Click to upload</span> or drag and drop
-                                                                    </p>
-                                                                    <p className="text-xs text-muted-foreground">SVG, PNG, JPG or GIF (MAX. 5MB)</p>
-                                                                </>
+            <div className="flex items-center justify-center min-h-screen p-4">
+                <div className="relative bg-white rounded-lg shadow-xl w-full max-w-6xl h-[95vh] max-h-[95vh] overflow-hidden">
+                    <button
+                        onClick={handleClose}
+                        className="absolute top-4 right-4 z-50 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        aria-label="Close modal"
+                    >
+                        <X className="h-6 w-6 text-gray-500" />
+                    </button>
+
+                    <div className="h-full flex flex-col">
+                        <CardHeader className="space-y-1 sticky top-0 bg-white z-10 border-b p-6">
+                            <CardTitle className="text-2xl md:text-3xl font-bold text-center">
+                                Edit Artwork
+                            </CardTitle>
+                            <CardDescription className="text-center">
+                                Update the details of your artwork
+                            </CardDescription>
+                        </CardHeader>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                                    <div className="space-y-6 h-full flex flex-col">
+                                        <FormField
+                                            control={form.control}
+                                            name="image"
+                                            render={() => (
+                                                <FormItem className="flex-1 flex flex-col">
+                                                    <FormLabel>Artwork Image</FormLabel>
+                                                    <FormControl>
+                                                        <div className="space-y-4 flex-1 flex flex-col">
+                                                            <div className="flex-1 flex items-center justify-center">
+                                                                <label
+                                                                    htmlFor="dropzone-file"
+                                                                    className="flex flex-col items-center justify-center w-full h-full min-h-[300px] border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors"
+                                                                >
+                                                                    <div className="flex flex-col items-center justify-center p-5">
+                                                                        {previewUrl ? (
+                                                                            <Image
+                                                                                src={previewUrl}
+                                                                                alt="Preview"
+                                                                                className="max-h-[50vh] max-w-full object-contain rounded-md"
+                                                                                width={500}
+                                                                                height={500}
+                                                                                onLoad={() => {
+                                                                                    if (newImageFile) {
+                                                                                        URL.revokeObjectURL(previewUrl);
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                        ) : (
+                                                                            <>
+                                                                                <ImageIcon className="w-10 h-10 mb-3 text-muted-foreground" />
+                                                                                <p className="mb-2 text-sm text-muted-foreground text-center">
+                                                                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                                                                                </p>
+                                                                                <p className="text-xs text-muted-foreground text-center">
+                                                                                    SVG, PNG, JPG or GIF (MAX. 10MB)
+                                                                                </p>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                    <Input
+                                                                        id="dropzone-file"
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        className="hidden"
+                                                                        onChange={handleImageChange}
+                                                                    />
+                                                                </label>
+                                                            </div>
+                                                            {!newImageFile && (
+                                                                <p className="text-sm text-muted-foreground text-center">
+                                                                    Current image will be kept if no new image is selected
+                                                                </p>
                                                             )}
                                                         </div>
-                                                        <Input
-                                                            id="dropzone-file"
-                                                            type="file"
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            onChange={handleImageChange}
-                                                        />
-                                                    </label>
-                                                </div>
-                                                {!isImageChanged && previewUrl && (
-                                                    <p className="text-sm text-muted-foreground text-center">
-                                                        Current image will be kept unless you upload a new one
-                                                    </p>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <Button
+                                            type="submit"
+                                            className="w-full mt-auto"
+                                            disabled={isSubmitting || !form.formState.isValid}
+                                        >
+                                            {isSubmitting ? (
+                                                <span className="flex items-center">
+                                                    <Loader2 className="animate-spin mr-2 h-5 w-5" />
+                                                    Updating...
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center">
+                                                    Save Changes
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-4 h-full overflow-y-auto">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormField
+                                                control={form.control}
+                                                name="title"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Title*</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder="Artwork title"
+                                                                {...field}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
                                                 )}
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                            />
+
+                                            <FormField
+                                                control={form.control}
+                                                name="art_category"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Category*</FormLabel>
+                                                        <FormControl>
+                                                            <ArtCategorySelect
+                                                                field={field}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="art_location"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Location*</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder="Artwork location"
+                                                                {...field}
+                                                                onChange={(e) => {
+                                                                    field.onChange(e);
+                                                                    form.trigger("art_location");
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="medium"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Medium*</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder="Oil on canvas, Bronze, etc."
+                                                                {...field}
+                                                                onChange={(e) => {
+                                                                    field.onChange(e);
+                                                                    form.trigger("medium");
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="dimensions"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Dimensions*</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder="e.g. 24 x 36 inches"
+                                                                {...field}
+                                                                onChange={(e) => {
+                                                                    field.onChange(e);
+                                                                    form.trigger("dimensions");
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="date"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Date*</FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                type="date"
+                                                                {...field}
+                                                                onChange={(e) => {
+                                                                    field.onChange(e);
+                                                                    form.trigger("date");
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="currency"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Currency*</FormLabel>
+                                                        <FormControl>
+                                                            <CurrencySelect
+                                                                name="currency"
+                                                                value={field.value}
+                                                                onChange={(value: CurrencyCode) => {
+                                                                    field.onChange(value);
+                                                                    form.trigger("currency");
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="artist_price"
+                                                render={({ field }) => {
+                                                    const currencyCode = form.watch("currency") as CurrencyCode;
+                                                    const currency = currencies.find(c => c.code === currencyCode);
+                                                    const symbol = currency?.symbol || "$"; // Fallback to dollar sign
+
+                                                    return (
+                                                        <FormItem>
+                                                            <FormLabel>Price*</FormLabel>
+                                                            <FormControl>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        type="number"
+                                                                        placeholder="0.00"
+                                                                        className="pl-8"
+                                                                        min="0"
+                                                                        step="0.01"
+                                                                        {...field}
+                                                                        onChange={(e) => {
+                                                                            field.onChange(e);
+                                                                            form.trigger("artist_price");
+                                                                        }}
+                                                                    />
+                                                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                                                                        {symbol}
+                                                                    </span>
+                                                                </div>
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    );
+                                                }}
+                                            />
+                                        </div>
+                                        <FormField
+                                            control={form.control}
+                                            name="description"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Description*</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea
+                                                            placeholder="Describe your artwork..."
+                                                            className="resize-none min-h-[150px]"
+                                                            {...field}
+                                                            onChange={(e) => {
+                                                                field.onChange(e);
+                                                                form.trigger("description");
+                                                            }}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </form>
+                            </Form>
                         </div>
 
-                        {/* Right Column - Artwork Details */}
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="title"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Title</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Artwork title" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="art_category"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Category</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a category" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="painting">Painting</SelectItem>
-                                                    <SelectItem value="sculpture">Sculpture</SelectItem>
-                                                    <SelectItem value="photography">Photography</SelectItem>
-                                                    <SelectItem value="digital">Digital Art</SelectItem>
-                                                    <SelectItem value="mixed_media">Mixed Media</SelectItem>
-                                                    <SelectItem value="other">Other</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="art_location"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Location</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Artwork location" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="artist_price"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Price ($)</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Price" type="number" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="medium"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Medium</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Oil on canvas, Bronze, etc." {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="dimensions"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Dimensions</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. 24 x 36 inches" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="date"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Date</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    type="date"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Description</FormLabel>
-                                        <FormControl>
-                                            <Textarea
-                                                placeholder="Description of your artwork"
-                                                className="resize-none min-h-[100px]"
-                                                {...field}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                {isSubmitting ? (
-                                    <span className="flex items-center">
-                                        <UploadCloud className="animate-pulse mr-2 h-5 w-5" />
-                                        Updating...
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center">
-                                        <UploadCloud className="mr-2 h-5 w-5" />
-                                        Update Artwork
-                                    </span>
-                                )}
-                            </Button>
-                        </div>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                        <CardFooter className="flex justify-center text-sm text-muted-foreground border-t sticky bottom-0 bg-white p-4">
+                            Changes may take a few minutes to appear
+                        </CardFooter>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 };

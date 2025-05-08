@@ -1,5 +1,5 @@
-// src/components/AuthPage.tsx
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,178 +13,220 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import SignupCard from "../profile-setup/ProfileSetup";
 import OtpCard from "../otp/OtpCard";
-import { migrateGuestWishlist } from '@/lib/wishlistMigration';
-import { migrateGuestCart } from '@/lib/cartMigration';
-import { migrateGuestNotificationPreferences } from "@/lib/notificationMigration";
-
-import { supabase } from "@/lib/supabase";
+import { useAuthStore } from "@/stores/auth/authStore";
+import { useUploadStore } from "@/stores/upload/uploadStore";
+import { AuthService } from "@/stores/auth/authService";
+import { isClient } from "@/lib/supabase"; // Import the isClient helper
 import {
-    loginFormSchema, LoginFormValues,
-    signupFormSchema, SignupFormValues,
-    OtpFormValues
+    loginFormSchema,
+    LoginFormValues,
+    signupFormSchema,
+    SignupFormValues,
+    OtpFormValues,
 } from "@/schemas/auth";
 
 export default function AuthPage() {
+    const router = useRouter();
+    const {
+        user,
+        isLoading,
+        error,
+        sessionChecked,
+        checkSession,
+        sendOtp,
+        verifyOtp,
+        completeProfileSetup,
+        clearError,
+    } = useAuthStore();
+    const { openUploadModal } = useUploadStore();
+
     const [isLogin, setIsLogin] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [showOtpCard, setShowOtpCard] = useState(false);
     const [otpTimer, setOtpTimer] = useState(30);
     const [isProfileSetup, setIsProfileSetup] = useState(false);
-    const router = useRouter();
+    const [hasUploadIntent, setHasUploadIntent] = useState(false);
 
-    // Check for existing session on component mount
-    useEffect(() => {
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                const { data: profile } = await supabase
-                    .from('profile')
-                    .select('*')
-                    .eq('user_id', session.user.id)
-                    .single();
-
-                if (profile) {
-                    window.location.href = '/dashboard';
-                } else {
-                    setIsProfileSetup(true);
-                    setIsLogin(false);
-                }
-            }
-        };
-        checkSession();
-    }, []);
-
-    // Login form
     const loginForm = useForm<LoginFormValues>({
         resolver: zodResolver(loginFormSchema),
-        defaultValues: {
-            email: "",
-        },
+        defaultValues: { email: "" },
+        mode: "onChange",
+        reValidateMode: "onChange",
     });
 
-    // Signup form
     const signupForm = useForm<SignupFormValues>({
         resolver: zodResolver(signupFormSchema),
-        defaultValues: {
-            name: "",
-            role: "",
-            email: "",
-        },
+        defaultValues: { name: "", role: undefined, email: "" },
+        mode: "onChange",
+        reValidateMode: "onChange",
     });
 
-    async function onOtpSubmit(values: OtpFormValues) {
-        setIsSubmitting(true);
+    useEffect(() => {
+        const uploadIntent = sessionStorage.getItem("uploadIntent");
+        if (uploadIntent === "true") {
+            setHasUploadIntent(true);
+        }
+        checkSession();
+    }, [checkSession]);
+
+    useEffect(() => {
+        if (error) {
+            toast.error(error);
+            clearError();
+        }
+    }, [error, clearError]);
+
+    useEffect(() => {
+        if (user && sessionChecked) {
+            handleUserRedirect();
+        }
+    }, [user, sessionChecked]);
+
+    const handleUserRedirect = async () => {
+        if (!user) return;
+
         try {
-            const { error } = await supabase.auth.verifyOtp({
-                email: loginForm.getValues("email"),
-                token: values.otp,
-                type: 'email',
-            });
+            const profileExists = await AuthService.checkProfileExists(user.id);
 
-            if (error) throw error;
-
-            toast.success("OTP verified successfully!");
-            const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-            if (!currentSession) {
-                throw new Error('Session not established after login');
-            }
-
-            // // Migrate guest wishlist to user wishlist
-            // await migrateGuestWishlist(currentSession.user.id);
-            // Migrate both wishlist and cart
-            await Promise.all([
-                migrateGuestWishlist(currentSession.user.id),
-                migrateGuestCart(currentSession.user.id),
-                migrateGuestNotificationPreferences(currentSession.user.id)
-            ]);
-            // Refresh both stores
-            // await Promise.all([
-            //     useWishlistStore.getState().fetchWishlist(),
-            //     useCartStore.getState().fetchCart()
-            // ]);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('User not found');
-
-            const { data: profile } = await supabase
-                .from('profile')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
-
-            if (profile) {
-                window.location.href = '/dashboard';
-            } else {
-                signupForm.setValue('email', loginForm.getValues('email'));
+            if (!profileExists) {
+                signupForm.setValue("email", user.email || "");
                 setIsProfileSetup(true);
                 setIsLogin(false);
+                return;
             }
-        } catch (error: any) {
-            console.error("Error during OTP verification:", error);
-            toast.error(error.message || "An unexpected error occurred");
-        } finally {
-            setIsSubmitting(false);
-        }
-    }
 
-    // Handle signup form submission
-    const onSignupSubmit = async (data: SignupFormValues) => {
-        setIsSubmitting(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('User not found');
-
-            const { error: profileError } = await supabase.from('profile').insert({
-                user_id: user.id,
-                name: data.name,
-                email: data.email,
-                role: data.role,
-            });
-
-            if (profileError) throw profileError;
-
-            toast.success("Profile setup completed successfully!");
-            router.push('/dashboard');
-        } catch (error: any) {
-            console.error("Error during profile setup:", error);
-            toast.error("Profile setup failed: " + (error.message || "An unexpected error occurred"));
-        } finally {
-            setIsSubmitting(false);
+            if (hasUploadIntent) {
+                handleUploadIntent();
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectUrl = urlParams.get("redirect") || "/dashboard";
+                window.location.href = redirectUrl;
+            }
+        } catch (error) {
+            toast.error("Failed to determine user state");
+            console.error("Redirect error:", error);
         }
     };
 
-    // Toggle between login and signup
+    const handleUploadIntent = () => {
+        const originalPath = sessionStorage.getItem("originalPath");
+
+        // Clean up session storage
+        sessionStorage.removeItem("uploadIntent");
+        sessionStorage.removeItem("originalPath");
+
+        // Open upload modal
+        openUploadModal();
+
+        // Redirect to original path or home
+        if (originalPath && originalPath !== "/login") {
+            router.push(originalPath);
+        } else {
+            router.push("/");
+        }
+    };
+
+    const handleSendOtp = async (formData: LoginFormValues) => {
+        try {
+            await sendOtp(formData.email);
+            setShowOtpCard(true);
+            startOtpTimer();
+            toast.success("OTP sent successfully!");
+        } catch (error) {
+            console.error("OTP send error:", error);
+            if (error instanceof Error) {
+                if (error.message.includes("rate limit")) {
+                    toast.error("Too many attempts. Please try again later.");
+                } else {
+                    toast.error("Failed to send OTP. Please try again.");
+                }
+            }
+        }
+    };
+
+    const handleOtpSubmit = async (values: OtpFormValues) => {
+        try {
+            await verifyOtp(loginForm.getValues("email"), values.otp);
+            toast.success("OTP verified successfully!");
+
+            // Handle redirection after OTP verification
+            if (hasUploadIntent) {
+                handleUploadIntent();
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectUrl = urlParams.get("redirect") || "/dashboard";
+                window.location.href = redirectUrl;
+            }
+        } catch (error) {
+            console.error("OTP verification error:", error);
+            if (error instanceof Error) {
+                if (error.message.includes("invalid OTP")) {
+                    toast.error("Invalid OTP. Please check and try again.");
+                } else {
+                    toast.error("Failed to verify OTP.");
+                }
+            }
+        }
+    };
+
+    const handleSignupSubmit = async (data: SignupFormValues) => {
+        try {
+            await completeProfileSetup(data);
+            toast.success("Profile setup completed successfully!");
+
+            // Handle redirection after profile setup
+            if (hasUploadIntent) {
+                handleUploadIntent();
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectUrl = urlParams.get("redirect") || "/dashboard";
+                window.location.href = redirectUrl;
+            }
+        } catch (error) {
+            console.error("Profile setup error:", error);
+            if (error instanceof Error) {
+                if (error.message.includes("duplicate")) {
+                    toast.error("This email is already registered.");
+                } else {
+                    toast.error("Failed to complete profile setup.");
+                }
+            }
+        }
+    };
+
     const toggleAuthMode = () => {
         setIsLogin(!isLogin);
         setShowOtpCard(false);
         setOtpTimer(30);
         setIsProfileSetup(false);
+        loginForm.reset();
+        signupForm.reset();
     };
 
-    // Send OTP and show OTP card
-    async function sendOtp() {
-        setIsSubmitting(true);
-        try {
-            const { error } = await supabase.auth.signInWithOtp({
-                email: loginForm.getValues("email"),
-            });
-
-            if (error) throw error;
-
-            toast.success("OTP sent successfully! Check your email.");
-            setShowOtpCard(true);
-        } catch (error: any) {
-            console.error("Error sending OTP:", error);
-            toast.error(error.message || "An unexpected error occurred");
-        } finally {
-            setIsSubmitting(false);
-        }
-    }
-
-    // Resend OTP
-    const resendOtp = async () => {
+    const startOtpTimer = () => {
         setOtpTimer(30);
-        await sendOtp();
+        const timer = setInterval(() => {
+            setOtpTimer((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
+
+    const resendOtp = async () => {
+        const email = loginForm.getValues("email");
+        if (!email) return;
+
+        try {
+            await sendOtp(email);
+            startOtpTimer();
+            toast.success("OTP resent successfully");
+        } catch (error) {
+            toast.error("Failed to resend OTP");
+            console.error("Resend OTP error:", error);
+        }
     };
 
     return (
@@ -199,6 +241,7 @@ export default function AuthPage() {
                 pauseOnFocusLoss
                 draggable
                 pauseOnHover
+                theme="light"
             />
             <div className="w-full max-w-md mx-auto relative">
                 {/* Login Card */}
@@ -220,25 +263,39 @@ export default function AuthPage() {
                         </CardHeader>
                         <CardContent>
                             <Form {...loginForm}>
-                                <form className="space-y-4">
+                                <form onSubmit={loginForm.handleSubmit(handleSendOtp)} className="space-y-4">
                                     <FormField
                                         control={loginForm.control}
                                         name="email"
-                                        render={({ field }) => (
+                                        render={({ field, fieldState }) => (
                                             <FormItem>
                                                 <FormLabel>Email</FormLabel>
                                                 <FormControl>
                                                     <div className="relative">
                                                         <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                        <Input placeholder="m@example.com" className="pl-10" {...field} />
+                                                        <Input
+                                                            placeholder="m@example.com"
+                                                            className="pl-10"
+                                                            {...field}
+                                                            onChange={(e) => {
+                                                                field.onChange(e);
+                                                                loginForm.trigger("email");
+                                                            }}
+                                                        />
                                                     </div>
                                                 </FormControl>
-                                                <FormMessage />
+                                                <FormMessage className="min-h-[20px] block text-sm text-destructive">
+                                                    {fieldState.error?.message}
+                                                </FormMessage>
                                             </FormItem>
                                         )}
                                     />
-                                    <Button type="button" className="w-full" onClick={sendOtp}>
-                                        Get OTP
+                                    <Button
+                                        type="submit"
+                                        className="w-full"
+                                        disabled={isLoading || !loginForm.formState.isValid}
+                                    >
+                                        {isLoading ? "Sending..." : "Get OTP"}
                                     </Button>
                                 </form>
                             </Form>
@@ -252,8 +309,8 @@ export default function AuthPage() {
                         }`}
                 >
                     <OtpCard
-                        onOtpSubmit={onOtpSubmit}
-                        isSubmitting={isSubmitting}
+                        onOtpSubmit={handleOtpSubmit}
+                        isSubmitting={isLoading}
                         resendOtp={resendOtp}
                         otpTimer={otpTimer}
                         setShowOtpCard={setShowOtpCard}
@@ -268,8 +325,8 @@ export default function AuthPage() {
                 >
                     <SignupCard
                         signupForm={signupForm}
-                        onSignupSubmit={onSignupSubmit}
-                        isSubmitting={isSubmitting}
+                        onSignupSubmit={handleSignupSubmit}
+                        isSubmitting={isLoading}
                         toggleAuthMode={toggleAuthMode}
                         isProfileSetup={isProfileSetup}
                     />

@@ -11,6 +11,7 @@ export type ArtworkUploadValues = {
     medium: string;
     dimensions: string;
     date: string;
+    currency: string; // Added currency field
     image: FileList;
 };
 
@@ -52,6 +53,7 @@ export const uploadService = {
                     date: values.date,
                     image_url: publicUrl,
                     user_id: userId,
+                    currency: values.currency, // Added currency field
                     status: 'pending_review',
                 }]);
 

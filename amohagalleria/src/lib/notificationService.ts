@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from "@/lib/supabase"; // Use the singleton instance
 import { getDeviceId } from './deviceFingerprint';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Cache for prompt decisions
 const promptCache = new Map<string, boolean>();
@@ -33,6 +28,11 @@ export const NotificationService = {
             const deviceInfo = await this.getDeviceInfo();
 
             // First, get the existing device record if it exists
+            if (!supabase) {
+                console.error('Supabase instance is null');
+                return false;
+            }
+
             const { data: existingDevice } = await supabase
                 .from('user_devices')
                 .select('user_id')
@@ -144,7 +144,7 @@ export const NotificationService = {
 
                 // Don't show if dismissed in last 30 days
                 if (profile?.notification_prompt_dismissed_at) {
-                    const lastDismissed = new Date(profile.notification_prompt_dismissed_at);
+                    const lastDismissed = new Date(profile.notification_prompt_dismissed_at as string);
                     const daysSinceDismissal = (Date.now() - lastDismissed.getTime()) / (86400 * 1000);
                     if (daysSinceDismissal < 30) return false;
                 }

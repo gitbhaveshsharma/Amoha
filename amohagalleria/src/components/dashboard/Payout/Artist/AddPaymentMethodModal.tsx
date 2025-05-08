@@ -1,8 +1,7 @@
+// src/components/PaymentMethodModal/AddPaymentMethodModal.tsx
 import React from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { usePaymentMethodStore } from "@/stores/Payout/artist/paymentMethods/paymentMethodStore";
 import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,65 +23,98 @@ import {
 import { BankAccountForm } from "./PaymentMethodModal/BankAccountForm";
 import { PayPalForm } from "./PaymentMethodModal/PayPalForm";
 import { StripeForm } from "./PaymentMethodModal/StripeForm";
-import { paymentMethodSchemas, PaymentMethod } from "@/types";
-
-const formSchema = z.object({
-    method_type: z.enum(['bank_account', 'paypal', 'stripe']),
-    is_default: z.boolean().default(false),
-    details: z.union([
-        paymentMethodSchemas.bank_account,
-        paymentMethodSchemas.paypal,
-        paymentMethodSchemas.stripe
-    ])
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
+import { PAYMENT_METHOD_TYPES, PAYMENT_METHOD_OPTIONS, isValidPaymentMethod } from "@/lib/constants/paymentMethods";
+import { paymentMethodSchema } from "@/schemas/payout/paymentMethodSchemas";
+import { usePaymentMethodStore } from "@/stores/Payout/artist/paymentMethods/paymentMethodStore";
+import type { z } from "zod";
+type PaymentMethodFormValues = z.infer<typeof paymentMethodSchema>;
 
 export const AddPaymentMethodModal = () => {
     const [open, setOpen] = React.useState(false);
     const { loading, error, addPaymentMethod } = usePaymentMethodStore();
 
-    const form = useForm({
-        resolver: zodResolver(formSchema),
+    const form = useForm<PaymentMethodFormValues>({
+        resolver: zodResolver(paymentMethodSchema),
         defaultValues: {
-            method_type: 'bank_account',
-            is_default: false as boolean,
+            method_type: PAYMENT_METHOD_TYPES.BANK_ACCOUNT,
+            is_default: false,
             details: {
-                account_name: '',
-                account_number: '',
-                routing_number: '',
-                bank_name: ''
+                account_name: "",
+                account_number: "",
+                routing_number: "",
+                bank_name: ""
             }
         }
     });
 
     const methodType = form.watch("method_type");
 
-    const onSubmit = async (values: FormValues) => {
-        await addPaymentMethod({
-            method_type: values.method_type,
-            details: values.details,
-            is_default: values.is_default ?? false,
-            is_verified: false
-        });
+    const onSubmit = async (data: PaymentMethodFormValues) => {
+        try {
+            await addPaymentMethod({
+                method_type: data.method_type,
+                details: data.details as PaymentMethodFormValues["details"],
+                is_default: data.is_default,
+                is_verified: false
+            });
 
-        if (!error) {
-            setOpen(false);
-            form.reset();
+            if (!error) {
+                setOpen(false);
+                form.reset();
+            }
+        } catch (err) {
+            console.error("Failed to add payment method:", err);
         }
     };
 
     const renderForm = () => {
         switch (methodType) {
-            case 'bank_account':
+            case PAYMENT_METHOD_TYPES.BANK_ACCOUNT:
                 return <BankAccountForm />;
-            case 'paypal':
+            case PAYMENT_METHOD_TYPES.PAYPAL:
                 return <PayPalForm />;
-            case 'stripe':
+            case PAYMENT_METHOD_TYPES.STRIPE:
                 return <StripeForm />;
             default:
                 return null;
+        }
+    };
+
+    const handleMethodTypeChange = (value: string) => {
+        if (!isValidPaymentMethod(value)) return;
+
+        // Type assertion is safe here because we've validated with isValidPaymentMethod
+        const methodType = value as typeof PAYMENT_METHOD_TYPES[keyof typeof PAYMENT_METHOD_TYPES];
+
+        // Reset form with new method type and appropriate empty details
+        const newValues = {
+            method_type: methodType,
+            is_default: form.getValues("is_default"),
+            details: getDefaultDetails(methodType),
+        } as PaymentMethodFormValues;
+
+        form.reset(newValues);
+    };
+
+    const getDefaultDetails = (methodType: typeof PAYMENT_METHOD_TYPES[keyof typeof PAYMENT_METHOD_TYPES]) => {
+        switch (methodType) {
+            case PAYMENT_METHOD_TYPES.BANK_ACCOUNT:
+                return {
+                    account_name: "",
+                    account_number: "",
+                    routing_number: "",
+                    bank_name: ""
+                };
+            case PAYMENT_METHOD_TYPES.PAYPAL:
+                return { email: "" };
+            case PAYMENT_METHOD_TYPES.STRIPE:
+                return {
+                    card_number: "",
+                    expiry: "",
+                    cvc: ""
+                };
+            default:
+                throw new Error(`Unknown payment method type: ${methodType}`);
         }
     };
 
@@ -106,25 +138,26 @@ export const AddPaymentMethodModal = () => {
                 )}
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit as SubmitHandler<FormValues>)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="space-y-4">
                             <div>
                                 <Label>Payment Method Type</Label>
                                 <Select
-                                    onValueChange={(value: string) => {
-                                        const paymentMethod = value as unknown as PaymentMethod;
-                                        form.setValue("method_type", paymentMethod as unknown as "bank_account" | "paypal" | "stripe");
-                                        form.setValue("method_type", value as "bank_account" | "paypal" | "stripe");
-                                    }}
+                                    onValueChange={handleMethodTypeChange}
                                     value={methodType}
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Select payment method" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="bank_account">Bank Account</SelectItem>
-                                        <SelectItem value="paypal">PayPal</SelectItem>
-                                        <SelectItem value="stripe">Credit/Debit Card</SelectItem>
+                                        {PAYMENT_METHOD_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{option.icon}</span>
+                                                    <span>{option.label}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -151,13 +184,7 @@ export const AddPaymentMethodModal = () => {
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={loading}>
-                                {loading ? (
-                                    <>
-                                        Adding...
-                                    </>
-                                ) : (
-                                    'Add Payment Method'
-                                )}
+                                {loading ? 'Adding...' : 'Add Payment Method'}
                             </Button>
                         </div>
                     </form>

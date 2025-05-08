@@ -1,24 +1,25 @@
 import { SupportTicketForm } from "@/components/Support/SupportTicketForm";
 import { SupportTicketList } from "@/components/Support/SupportTicketList";
+import { Card, CardTitle } from "@/components/ui/card";
 
 export function SupportSection() {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-4 md:p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 ">
             {/* Left Side: Ticket Form */}
             <div className="space-y-4">
-                <h2 className="text-xl font-bold">Raise a New Ticket</h2>
-                <div className="bg-white p-6 rounded-lg shadow">
+                <Card className="p-6">
+                    <CardTitle className="text-xl ">Create a Support Ticket</CardTitle>
                     <SupportTicketForm />
-                </div>
+                </Card>
             </div>
 
             {/* Right Side: Ticket List */}
             <div className="space-y-4">
-                <h2 className="text-xl font-bold">Your Tickets</h2>
-                <div className="bg-white p-6 rounded-lg shadow">
+                <Card className="p-6">
+                    <CardTitle className="text-xl ">Your Tickets</CardTitle>
                     <SupportTicketList />
-                </div>
+                </Card>
             </div>
-        </div>
-    )
+        </div >
+    );
 }

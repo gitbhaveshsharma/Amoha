@@ -1,4 +1,3 @@
-// stores/upload/uploadStore.ts
 import { create } from 'zustand';
 import { uploadService } from './uploadService';
 import { ArtworkUploadValues } from './uploadService';
@@ -20,20 +19,40 @@ export const useUploadStore = create<UploadState>((set) => ({
     error: null,
     success: false,
 
-    openUploadModal: () => set({ isUploadModalOpen: true, error: null, success: false }),
-    closeUploadModal: () => set({ isUploadModalOpen: false }),
+    openUploadModal: () => set({
+        isUploadModalOpen: true,
+        error: null,
+        success: false,
+        isSubmitting: false
+    }),
+
+    closeUploadModal: () => set({
+        isUploadModalOpen: false
+    }),
 
     uploadArtwork: async (values, userId) => {
         set({ isSubmitting: true, error: null, success: false });
 
-        const result = await uploadService.uploadArtwork(values, userId);
+        try {
+            const result = await uploadService.uploadArtwork(values, userId);
 
-        if (result.success) {
-            set({ success: true, isSubmitting: false });
-        } else {
-            set({ error: result.error || "Upload failed", isSubmitting: false });
+            if (result.success) {
+                set({ success: true, isSubmitting: false });
+            } else {
+                throw new Error(result.error || "Upload failed");
+            }
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Upload failed",
+                isSubmitting: false
+            });
+            throw error;
         }
     },
 
-    reset: () => set({ isSubmitting: false, error: null, success: false }),
+    reset: () => set({
+        isSubmitting: false,
+        error: null,
+        success: false
+    }),
 }));

@@ -3,23 +3,60 @@ import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/Button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { otpFormSchema } from "@/schemas/auth"
+import { useEffect, useState } from "react"
 
-const otpFormSchema = z.object({
-    otp: z.string().length(6, {
-        message: "OTP must be exactly 6 digits.",
-    }),
-})
+type OtpFormValues = z.infer<typeof otpFormSchema>
 
-export default function OtpCard({ onOtpSubmit, isSubmitting, resendOtp, otpTimer, setShowOtpCard, setShowPasswordCard }: any) {
-    const otpForm = useForm<z.infer<typeof otpFormSchema>>({
+interface OtpCardProps {
+    onOtpSubmit: (values: OtpFormValues) => void
+    isSubmitting: boolean
+    resendOtp: () => void
+    otpTimer: number
+    setShowOtpCard?: (show: boolean) => void
+    setShowPasswordCard?: (show: boolean) => void
+    email?: string
+}
+export default function OtpCard({
+    onOtpSubmit,
+    isSubmitting,
+    resendOtp,
+    otpTimer,
+    email
+}: OtpCardProps) {
+    const form = useForm<OtpFormValues>({
         resolver: zodResolver(otpFormSchema),
         defaultValues: {
             otp: "",
         },
+        mode: "onChange",
     })
+
+    const [inputValue, setInputValue] = useState<string>("")
+    const [autoSubmitTriggered, setAutoSubmitTriggered] = useState(false)
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        if (/^\d*$/.test(value) && value.length <= 6) {
+            setInputValue(value)
+            form.setValue("otp", value, { shouldValidate: true })
+        }
+    }
+
+    useEffect(() => {
+        if (inputValue.length === 6 && form.formState.isValid && !autoSubmitTriggered) {
+            setAutoSubmitTriggered(true)
+            const timer = setTimeout(() => {
+                form.handleSubmit(onOtpSubmit)()
+            }, 100) // Small delay to ensure the 6th digit is visible
+            return () => clearTimeout(timer)
+        } else if (inputValue.length < 6) {
+            setAutoSubmitTriggered(false)
+        }
+    }, [inputValue, form.formState.isValid, form, onOtpSubmit, autoSubmitTriggered])
 
     return (
         <Card className="w-full shadow-lg">
@@ -32,21 +69,33 @@ export default function OtpCard({ onOtpSubmit, isSubmitting, resendOtp, otpTimer
                     </div>
                 </div>
                 <CardTitle className="text-2xl font-bold text-center">Enter OTP</CardTitle>
-                <CardDescription className="text-center">Please enter the OTP sent to your email</CardDescription>
+                <CardDescription className="text-center">
+                    Please enter the 6-digit OTP sent to {email || "your email"}
+                </CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...otpForm}>
-                    <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onOtpSubmit)} className="space-y-4">
                         <FormField
-                            control={otpForm.control}
+                            control={form.control}
                             name="otp"
-                            render={({ field }) => (
+                            render={({ field, fieldState }) => (
                                 <FormItem>
-                                    <FormLabel>OTP</FormLabel>
+                                    <FormLabel>OTP Code</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Enter OTP" {...field} />
+                                        <Input
+                                            placeholder="123456"
+                                            {...field}
+                                            value={inputValue}
+                                            onChange={handleInputChange}
+                                            maxLength={6}
+                                            autoComplete="one-time-code"
+                                            inputMode="numeric"
+                                        />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="min-h-[20px] block">
+                                        {fieldState.error?.message}
+                                    </FormMessage>
                                 </FormItem>
                             )}
                         />
@@ -55,16 +104,22 @@ export default function OtpCard({ onOtpSubmit, isSubmitting, resendOtp, otpTimer
                                 <span>Resend OTP in {otpTimer} seconds</span>
                             ) : (
                                 <button
+                                    type="button"
                                     onClick={resendOtp}
                                     className="text-primary font-medium hover:underline focus:outline-none cursor-pointer"
+                                    disabled={isSubmitting}
                                 >
                                     Resend OTP
                                 </button>
                             )}
                         </div>
-                        <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={isSubmitting || !form.formState.isValid}
+                        >
                             {isSubmitting ? (
-                                <span className="flex items-center">
+                                <span className="flex items-center justify-center">
                                     <svg
                                         className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -85,7 +140,7 @@ export default function OtpCard({ onOtpSubmit, isSubmitting, resendOtp, otpTimer
                                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                         ></path>
                                     </svg>
-                                    Verifying OTP...
+                                    Verifying...
                                 </span>
                             ) : (
                                 "Verify OTP"
@@ -94,19 +149,6 @@ export default function OtpCard({ onOtpSubmit, isSubmitting, resendOtp, otpTimer
                     </form>
                 </Form>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-                <div className="text-center text-sm">
-                    <button
-                        onClick={() => {
-                            setShowOtpCard(false);
-                            setShowPasswordCard(true);
-                        }}
-                        className="text-primary font-medium hover:underline focus:outline-none cursor-pointer"
-                    >
-                        Login with another way
-                    </button>
-                </div>
-            </CardFooter>
         </Card>
     )
 }

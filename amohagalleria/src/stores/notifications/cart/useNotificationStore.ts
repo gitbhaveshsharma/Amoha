@@ -1,6 +1,7 @@
 // stores/notifications/useNotificationStore.ts
 import { create } from 'zustand';
 import { notificationService } from './notificationService';
+import { toast } from 'react-toastify';
 
 export interface Notification {
   id: string;
@@ -28,12 +29,12 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   notifications: [],
   unreadCount: 0,
   isLoading: false,
-  
+
   fetchNotifications: async () => {
     set({ isLoading: true });
     try {
       const data = await notificationService.getNotifications();
-      set({ 
+      set({
         notifications: data,
         unreadCount: data.filter(n => !n.is_read).length
       });
@@ -45,7 +46,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   markAsRead: async (id: string) => {
     await notificationService.markAsRead(id);
     set(state => ({
-      notifications: state.notifications.map(n => 
+      notifications: state.notifications.map(n =>
         n.id === id ? { ...n, is_read: true } : n
       ),
       unreadCount: state.unreadCount - 1
@@ -56,6 +57,14 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     return notificationService.subscribe((payload) => {
       set(state => {
         const newNotification = payload.new;
+
+        // Show a toast notification for the new notification
+        if (newNotification && !state.notifications.some(n => n.id === newNotification.id)) {
+          toast.info(
+            `${newNotification.title}: ${newNotification.message} - ${newNotification.metadata.artwork_title || 'Untitled'} by ${newNotification.metadata.artist_name || 'Unknown Artist'}`,
+          );
+        }
+
         const updatedNotifications = [newNotification, ...state.notifications];
         return {
           notifications: updatedNotifications,
