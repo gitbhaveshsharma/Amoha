@@ -16,7 +16,7 @@ interface Artwork {
     image_url: string;
     artist_price: number;
     description: string;
-    artist_id: string;
+    user_id: string; // this is the artist's user ID
 }
 
 const HomeSection = () => {
@@ -30,7 +30,7 @@ const HomeSection = () => {
             try {
                 const { data: artworksData, error } = await supabase
                     .from("artworks")
-                    .select("id, title, image_url, artist_price, description, artist_id")
+                    .select("id, title, image_url, artist_price, description, user_id")
                     .eq("status", "pending_review");
 
                 if (error) throw error;
@@ -81,7 +81,7 @@ const HomeSection = () => {
                                 <div className="flex gap-2">
                                     <MakeOfferButton
                                         artworkId={artwork.id}
-                                        artistId={artwork.artist_id}
+                                        artistId={artwork.user_id}
                                         currentPrice={artwork.artist_price}
                                         makeOffer={makeOffer}
                                         isLoading={isLoading}

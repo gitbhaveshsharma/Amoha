@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSupportStore } from '@/stores/support/userSupportStore';
 import { Omit, Ticket } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export function SupportTicketForm() {
     const [subject, setSubject] = useState('');
@@ -26,19 +28,24 @@ export function SupportTicketForm() {
             setLoading(true);
             try {
                 // Fetch categories
-                const { data: categoriesData } = await supabase
+                const { data: categoriesData, error: categoriesError } = await supabase
                     .from('ticket_categories')
                     .select('id, name');
 
                 // Fetch priorities
-                const { data: prioritiesData } = await supabase
+                const { data: prioritiesData, error: prioritiesError } = await supabase
                     .from('ticket_priorities')
                     .select('id, name');
 
-                if (categoriesData) setCategories(categoriesData);
-                if (prioritiesData) setPriorities(prioritiesData);
+                if (categoriesError || prioritiesError) {
+                    throw categoriesError || prioritiesError;
+                }
+
+                if (categoriesData) setCategories(categoriesData as { id: string; name: string }[]);
+                if (prioritiesData) setPriorities(prioritiesData as { id: string; name: string }[]);
             } catch (error) {
                 console.error('Error fetching data:', error);
+                toast.error('Failed to load form data. Please try again.');
             } finally {
                 setLoading(false);
             }
@@ -57,28 +64,16 @@ export function SupportTicketForm() {
         setAttachments(attachments.filter((_, i) => i !== index));
     };
 
-    // Update your handleSubmit function in SupportTicketForm.tsx
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Form submitted'); // Basic log to confirm submission
 
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
-            console.warn('No user is logged in or authentication failed:', authError);
-            return [];
+            toast.error('You must be logged in to submit a ticket');
+            return;
         }
 
-
-        console.log('Form data:', {
-            subject,
-            description,
-            categoryId,
-            priorityId,
-            attachments: attachments.length
-        });
-
         setLoading(true);
-        console.log('Loading state set to true');
 
         try {
             const ticketData: Omit<Ticket, 'id' | 'created_at' | 'updated_at'> = {
@@ -90,21 +85,15 @@ export function SupportTicketForm() {
                 status: 'open',
             };
 
-            console.log('Creating ticket with data:', ticketData);
-
             // First create the ticket
             const newTicket = await createNewTicket(ticketData);
-            console.log('Ticket created:', newTicket);
 
             // Then upload attachments if any
             if (attachments.length > 0) {
-                console.log('Processing attachments');
                 for (const file of attachments) {
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${newTicket.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
                     const filePath = `ticket-attachments/${fileName}`;
-
-                    console.log('Uploading file:', file.name);
 
                     // Upload to Supabase storage
                     const { error: uploadError } = await supabase
@@ -113,11 +102,8 @@ export function SupportTicketForm() {
                         .upload(filePath, file);
 
                     if (uploadError) {
-                        console.error('Upload error:', uploadError);
                         throw uploadError;
                     }
-
-                    console.log('File uploaded, saving attachment record');
 
                     // Save attachment record
                     const { error: attachmentError } = await supabase
@@ -129,17 +115,14 @@ export function SupportTicketForm() {
                         }]);
 
                     if (attachmentError) {
-                        console.error('Attachment save error:', attachmentError);
                         throw attachmentError;
                     }
                 }
             }
 
-            console.log('Refreshing ticket list');
             // Refresh the ticket list
             await fetchUserTickets(user.id);
 
-            console.log('Resetting form');
             // Reset form
             setSubject('');
             setDescription('');
@@ -148,10 +131,17 @@ export function SupportTicketForm() {
             setAttachments([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
 
+            // Show success message
+            toast.success('Ticket submitted successfully!', {
+                autoClose: 3000,
+            });
+
         } catch (error) {
             console.error('Error in form submission:', error);
+            toast.error('Failed to submit ticket. Please try again.', {
+                autoClose: 3000,
+            });
         } finally {
-            console.log('Setting loading to false');
             setLoading(false);
         }
     };

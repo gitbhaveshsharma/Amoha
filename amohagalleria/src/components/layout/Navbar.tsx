@@ -1,4 +1,3 @@
-// components/Navbar.tsx
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -22,7 +21,10 @@ const Navbar: React.FC = () => {
     const handleUploadClick = (e: React.MouseEvent) => {
         e.preventDefault();
         if (!session) {
-            router.push(`/login?redirect=${encodeURIComponent("/upload")}`);
+            // Store upload intent and current path before redirecting to login
+            sessionStorage.setItem('uploadIntent', 'true');
+            sessionStorage.setItem('originalPath', pathname);
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         } else {
             openUploadModal();
         }
@@ -34,8 +36,6 @@ const Navbar: React.FC = () => {
         pathname.startsWith("/forgot-password");
 
     const renderAuthButton = () => {
-        // Optional: Show loading state if needed
-
         if (session) {
             return (
                 <div className="relative group">

@@ -2,46 +2,42 @@
 export interface Artwork {
     id: string;
     title: string;
-    image_url: string;
-    artist_price: number;
     description: string;
-    artist_id?: string;
-    is_auction?: boolean;
-    current_bid?: number | null;
-    error?: string | null;
-}
-
-export interface Artwork {
-    id: string;
-    title: string;
-    description: string;
-    image_url: string;
+    image_url: string | null;
     status: string;
     dimensions: string;
     date: string;
     art_category: string;
     medium: string;
     art_location: string;
-    artist_price: number;
+    artist_price: number | null;
     user_id: string;
     created_at: string;
     updated_at: string;
-    error?: string | null;
+    is_original: boolean;
+    edition_number: string | null;
+    currency: string;
 }
+
 
 export interface ArtworkUpdate {
     title?: string;
     description?: string;
     image_url?: string;
+    image?: File;
     status?: string;
     dimensions?: string;
     date?: string;
-    art_category?: string;
+    art_category?: string; // Now matches the slug from your database
     medium?: string;
     art_location?: string;
     artist_price?: number;
+    is_original?: boolean;
+    edition_number?: string;
+    currency?: string;
     error?: string | null;
 }
+
 
 export interface CartItem {
     id: string;

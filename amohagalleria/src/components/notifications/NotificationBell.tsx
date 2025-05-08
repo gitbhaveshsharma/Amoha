@@ -7,6 +7,7 @@ import { useNotificationStore } from "@/stores/notifications/cart/useNotificatio
 import { NotificationList } from "./NotificationList";
 import { Button } from "../ui/Button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Badge } from "../ui/badge";
 
 export function NotificationBell() {
     const {
@@ -27,16 +28,19 @@ export function NotificationBell() {
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="outline" size="icon" className="relative hover:bg-[#a35339]/10 hover:text-[#a35339] text-gray-600 dark:hover:bg-[#a35339]/20">
                     {unreadCount > 0 ? (
                         <BellRing className="h-5 w-5" />
                     ) : (
                         <Bell className="h-5 w-5" />
                     )}
                     {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        <Badge
+                            variant="destructive"
+                            className="absolute -top-1 -right-1 h-5 w-5 text-xs rounded-full flex items-center justify-center"
+                        >
                             {unreadCount > 9 ? "9+" : unreadCount}
-                        </span>
+                        </Badge>
                     )}
                 </Button>
             </PopoverTrigger>

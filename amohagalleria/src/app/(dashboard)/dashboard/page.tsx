@@ -2,17 +2,21 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { DashboardLoader } from "@/components/dashboard/DashboardLoader";
 import { DashboardHome } from "@/components/dashboard/DashboardSections/DashboardHome";
-import { ProfileCard as ProfileSection } from "@/components/dashboard/DashboardSections/ProfileSection";
+import { ProfileSection } from "@/components/dashboard/DashboardSections/ProfileSection";
 import { WishlistSection } from "@/components/dashboard/DashboardSections/WishlistSection";
 import { BidsSection } from "@/components/dashboard/DashboardSections/BidsSection";
 import { UploadSection } from "@/components/dashboard/DashboardSections/UploadSection";
 import { SupportSection } from "@/components/dashboard/DashboardSections/SupportSection";
 import { ArtworkSection } from "@/components/dashboard/DashboardSections/ArtworkSection";
-import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection"; // Fixed import path
+import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection";
+import { CartSection } from "@/components/dashboard/DashboardSections/CartSection";
+import { SaleSection } from "@/components/dashboard/DashboardSections/SaleSection";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/dashboard/Sidebar";
+import { useProfileStore } from "@/stores/profile/profileStore";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 type DashboardSection =
     | "dashboard"
@@ -22,27 +26,21 @@ type DashboardSection =
     | "profile"
     | "upload"
     | "artworks"
-    | "payouts"; // Make sure this type includes payouts
-
-interface ProfileData {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    created_at: string;
-    avatar_url?: string;
-    user_id: string;
-    bio?: string;
-    address?: string;
-}
+    | "payouts"
+    | "cart"
+    | "sale"; // Added "sale" section
 
 export default function DashboardPage() {
-    const [profile, setProfile] = useState<ProfileData | null>(null);
-    const [loading, setLoading] = useState(true);
     const [authChecked, setAuthChecked] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeSection, setActiveSection] = useState<DashboardSection>("dashboard");
     const router = useRouter();
+
+    const {
+        profile,
+        loading: profileLoading,
+        fetchProfile,
+    } = useProfileStore();
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -54,35 +52,10 @@ export default function DashboardPage() {
             }
 
             setAuthChecked(true);
-            await fetchProfile(session.user.id);
-        };
 
-        const fetchProfile = async (userId: string) => {
-            try {
-                const { data: profileData, error } = await supabase
-                    .from("profile")
-                    .select("*")
-                    .eq("user_id", userId)
-                    .single();
-
-                if (error) throw error;
-
-                setProfile({
-                    id: profileData.id,
-                    name: profileData.name,
-                    email: profileData.email,
-                    role: profileData.role,
-                    created_at: profileData.created_at,
-                    avatar_url: profileData.avatar_url,
-                    user_id: profileData.user_id,
-                    bio: profileData.bio || "",
-                    address: profileData.address || "",
-                });
-            } catch (error) {
-                console.error("Error fetching profile:", error);
-                router.push("/auth");
-            } finally {
-                setLoading(false);
+            // Fetch profile only if not already loaded
+            if (!profile) {
+                await fetchProfile(session.user.id);
             }
         };
 
@@ -97,7 +70,7 @@ export default function DashboardPage() {
         return () => {
             subscription?.unsubscribe();
         };
-    }, [router]);
+    }, [router, fetchProfile, profile]);
 
     const handleSignOut = async () => {
         try {
@@ -110,6 +83,19 @@ export default function DashboardPage() {
     };
 
     const renderSection = () => {
+        if (!authChecked || profileLoading || !profile) {
+            return (
+                <div className="p-6 space-y-6">
+                    <Skeleton className="h-10 w-full" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[...Array(6)].map((_, i) => (
+                            <Skeleton key={i} className="h-40 rounded-lg" />
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
         switch (activeSection) {
             case "dashboard":
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
@@ -118,27 +104,26 @@ export default function DashboardPage() {
             case "bids":
                 return <BidsSection />;
             case "upload":
-                return (
-                    <UploadSection
-
-                    />
-                );
+                return <UploadSection />;
             case "support":
                 return <SupportSection />;
             case "profile":
-                return profile ? (
-                    <ProfileSection
-                        profile={profile}
-                        onUpdate={(updatedProfile) => setProfile(updatedProfile)}
-                    />
-                ) : null;
+                return <ProfileSection />;
             case "artworks":
                 return <ArtworkSection />;
             case "payouts":
-                return <ArtistPayoutSection />; // Add case for payouts section
+                return <ArtistPayoutSection />;
+            case "cart":
+                return <CartSection />;
+            case "sale": // Added case for "sale"
+                return <SaleSection />;
             default:
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
         }
+    };
+
+    const handleWishlistClick = () => {
+        setActiveSection("wishlist"); // Navigate to wishlist section
     };
 
     const getSectionTitle = () => {
@@ -150,7 +135,9 @@ export default function DashboardPage() {
             case "support": return "Support Center";
             case "profile": return "My Profile";
             case "artworks": return "My Artworks";
-            case "payouts": return "Artist Payouts"; // Add title for payouts section
+            case "payouts": return "Artist Payouts";
+            case "cart": return "My Cart";
+            case "sale": return "My Sales"; // Added title for "sale"
             default: return "Dashboard";
         }
     };
@@ -164,16 +151,13 @@ export default function DashboardPage() {
             case "support": return "Get help with your account";
             case "profile": return "View and edit your profile";
             case "artworks": return "View and manage your artworks";
-            case "payouts": return "Manage your earnings and payment methods"; // Add description for payouts section
+            case "payouts": return "Manage your earnings and payment methods";
+            case "cart": return "Review and manage items in your cart";
+            case "sale": return "Track and manage your sales"; // Added description for "sale"
             default: return "";
         }
     };
 
-    if (!authChecked || loading || !profile) {
-        return <DashboardLoader />;
-    }
-
-    // In your main dashboard component
     return (
         <div className="flex min-h-screen bg-gray-50">
             <Sidebar
@@ -181,23 +165,27 @@ export default function DashboardPage() {
                 onClose={() => setSidebarOpen(false)}
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
+                isLoading={!authChecked || profileLoading}
             />
 
             <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+                {/* Header with no padding container */}
                 <DashboardHeader
                     title={getSectionTitle()}
                     description={getSectionDescription()}
-                    profile={{ name: profile.name, avatar_url: profile.avatar_url }}
+                    profile={{ name: profile?.name || "", avatar_url: profile?.avatar_url }}
                     onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
                     onProfileClick={() => setActiveSection("profile")}
                     onSignOut={handleSignOut}
-
+                    loading={!authChecked || profileLoading}
+                    onCartClick={() => setActiveSection("cart")}
+                    onWishlistClick={handleWishlistClick}
+                    wishlistCount={5}
+                    activeSection={activeSection}
                 />
 
-                <main
-                    className={`flex-1 overflow-auto transition-opacity ${sidebarOpen ? 'lg:opacity-100 opacity-70' : 'opacity-100'}`}
-                // style={{ maxHeight: 'calc(100vh - 64px)' }}
-                >
+                {/* Main content - padding can be handled by individual sections */}
+                <main className={`flex-1 overflow-auto p-4 md:p-6 ${sidebarOpen ? 'lg:opacity-100 opacity-70' : 'opacity-100'}`}>
                     {renderSection()}
                 </main>
             </div>
