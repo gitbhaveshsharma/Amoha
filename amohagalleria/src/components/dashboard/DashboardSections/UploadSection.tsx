@@ -282,12 +282,7 @@ export const UploadSection = () => {
                                             <FormLabel>Currency*</FormLabel>
                                             <FormControl>
                                                 <CurrencySelect
-                                                    name="currency"
-                                                    value={field.value}
-                                                    onChange={(value: CurrencyCode) => {
-                                                        field.onChange(value);
-                                                        form.trigger("currency");
-                                                    }}
+                                                    field={field}
                                                 />
                                             </FormControl>
                                             <FormMessage />

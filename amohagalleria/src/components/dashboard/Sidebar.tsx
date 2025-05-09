@@ -4,36 +4,41 @@ import {
     LayoutDashboard,
     Gavel,
     LifeBuoy,
-    User,
-    X,
     UploadCloud,
     ImageIcon,
     Wallet,
-    DollarSign, // Import icon for "sale"
+    DollarSign,
+    // Settings,
+    X,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton"; // Make sure you have this component
+import { Skeleton } from "@/components/ui/skeleton";
 
-type DashboardSection = "dashboard" | "bids" | "support" | "profile" | "upload" | "artworks" | "payouts" | "sale";
+type DashboardSection = "dashboard" | "bids" | "support" | "upload" | "artworks" | "payouts" | "sales";
 
 interface SidebarProps {
     isOpen: boolean;
     onClose: () => void;
     activeSection: DashboardSection;
     setActiveSection: (section: DashboardSection) => void;
-    isLoading?: boolean; // Add loading state prop
+    isLoading?: boolean;
 }
 
 const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading = false }: SidebarProps) => {
-    const currentYear = 2023; // Replace dynamic `new Date()` with a static value for SSR consistency
-    const sections = [
+    const currentYear = new Date().getFullYear();
+
+    // Grouped sections for better organization
+    const primarySections = [
         { label: "Dashboard", value: "dashboard", icon: LayoutDashboard },
-        { label: "Bids", value: "bids", icon: Gavel },
-        { label: "Upload", value: "upload", icon: UploadCloud },
+        { label: "My Artworks", value: "artworks", icon: ImageIcon },
+        { label: "My Bids", value: "bids", icon: Gavel },
+        { label: "Sales", value: "sales", icon: DollarSign },
         { label: "Payouts", value: "payouts", icon: Wallet },
+    ];
+
+    const secondarySections = [
+        { label: "Upload New", value: "upload", icon: UploadCloud },
+        // { label: "Settings", value: "settings", icon: Settings },
         { label: "Support", value: "support", icon: LifeBuoy },
-        { label: "Profile", value: "profile", icon: User },
-        { label: "Artworks", value: "artworks", icon: ImageIcon },
-        { label: "Sales", value: "sale", icon: DollarSign }, // Added "sale" section
     ];
 
     return (
@@ -59,7 +64,7 @@ const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading =
                         {isLoading ? (
                             <Skeleton className="h-6 w-32" />
                         ) : (
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Dashboard</h2>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Artist Dashboard</h2>
                         )}
                         <button
                             onClick={onClose}
@@ -70,49 +75,85 @@ const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading =
                         </button>
                     </div>
 
-                    <nav className="flex-1 space-y-1">
+                    <nav className="flex-1 space-y-6">
                         {isLoading ? (
-                            // Skeleton loading state
                             <div className="space-y-2">
                                 {[...Array(8)].map((_, i) => (
                                     <Skeleton key={i} className="h-10 w-full rounded-lg" />
                                 ))}
                             </div>
                         ) : (
-                            // Actual content
-                            sections.map((section) => {
-                                const Icon = section.icon;
-                                return (
-                                    <button
-                                        key={section.value}
-                                        onClick={() => {
-                                            setActiveSection(section.value as DashboardSection);
-                                            onClose();
-                                        }}
-                                        className={cn(
-                                            "flex items-center w-full p-3 text-left rounded-lg transition-colors duration-200",
-                                            "hover:bg-[#a35339]/10 hover:text-[#a35339] dark:hover:bg-[#a35339]/20 dark:hover:text-[#a35339]",
-                                            activeSection === section.value
-                                                ? "bg-[#a35339]/20 text-[#a35339] font-medium dark:bg-[#a35339]/30 dark:text-[#a35339]"
-                                                : "text-gray-600 dark:text-gray-400"
-                                        )}
-                                    >
-                                        <Icon className="h-5 w-5 mr-3" />
-                                        {section.label}
-                                        {activeSection === section.value && (
-                                            <span className="ml-auto h-2 w-2 rounded-full bg-[#a35339]" />
-                                        )}
-                                    </button>
-                                );
-                            })
+                            <>
+                                <div className="space-y-1">
+                                    <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        Main
+                                    </h3>
+                                    {primarySections.map((section) => {
+                                        const Icon = section.icon;
+                                        return (
+                                            <button
+                                                key={section.value}
+                                                onClick={() => {
+                                                    setActiveSection(section.value as DashboardSection);
+                                                    onClose();
+                                                }}
+                                                className={cn(
+                                                    "flex items-center w-full p-3 text-left rounded-lg transition-colors duration-200",
+                                                    "hover:bg-[#a35339]/10 hover:text-[#a35339] dark:hover:bg-[#a35339]/20 dark:hover:text-[#a35339]",
+                                                    activeSection === section.value
+                                                        ? "bg-[#a35339]/20 text-[#a35339] font-medium dark:bg-[#a35339]/30 dark:text-[#a35339]"
+                                                        : "text-gray-600 dark:text-gray-400"
+                                                )}
+                                            >
+                                                <Icon className="h-5 w-5 mr-3" />
+                                                {section.label}
+                                                {activeSection === section.value && (
+                                                    <span className="ml-auto h-2 w-2 rounded-full bg-[#a35339]" />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="space-y-1">
+                                    <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        Tools
+                                    </h3>
+                                    {secondarySections.map((section) => {
+                                        const Icon = section.icon;
+                                        return (
+                                            <button
+                                                key={section.value}
+                                                onClick={() => {
+                                                    setActiveSection(section.value as DashboardSection);
+                                                    onClose();
+                                                }}
+                                                className={cn(
+                                                    "flex items-center w-full p-3 text-left rounded-lg transition-colors duration-200",
+                                                    "hover:bg-[#a35339]/10 hover:text-[#a35339] dark:hover:bg-[#a35339]/20 dark:hover:text-[#a35339]",
+                                                    activeSection === section.value
+                                                        ? "bg-[#a35339]/20 text-[#a35339] font-medium dark:bg-[#a35339]/30 dark:text-[#a35339]"
+                                                        : "text-gray-600 dark:text-gray-400"
+                                                )}
+                                            >
+                                                <Icon className="h-5 w-5 mr-3" />
+                                                {section.label}
+                                                {activeSection === section.value && (
+                                                    <span className="ml-auto h-2 w-2 rounded-full bg-[#a35339]" />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
                         )}
                     </nav>
 
-                    <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400">
                         {isLoading ? (
                             <Skeleton className="h-4 w-24" />
                         ) : (
-                            <span>© {currentYear} Amoha</span>
+                            <span>© {currentYear} Amoha. All rights reserved.</span>
                         )}
                     </div>
                 </div>
@@ -122,4 +163,3 @@ const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading =
 };
 
 export default Sidebar;
-
