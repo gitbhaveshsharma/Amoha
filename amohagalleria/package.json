@@ -41,6 +41,7 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.56.2",
+    "react-intersection-observer": "^9.16.0",
     "react-toastify": "^11.0.5",
     "redis": "^4.7.0",
     "sonner": "^2.0.3",

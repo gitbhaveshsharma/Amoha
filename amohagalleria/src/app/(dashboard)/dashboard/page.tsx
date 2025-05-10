@@ -17,7 +17,6 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import { useProfileStore } from "@/stores/profile/profileStore";
 import { Skeleton } from "@/components/ui/skeleton";
 
-
 type DashboardSection =
     | "dashboard"
     | "wishlist"
@@ -28,7 +27,7 @@ type DashboardSection =
     | "artworks"
     | "payouts"
     | "cart"
-    | "sale"; // Added "sale" section
+    | "sale";
 
 export default function DashboardPage() {
     const [authChecked, setAuthChecked] = useState(false);
@@ -40,6 +39,8 @@ export default function DashboardPage() {
         profile,
         loading: profileLoading,
         fetchProfile,
+        isAdmin,
+        isArtist
     } = useProfileStore();
 
     useEffect(() => {
@@ -53,7 +54,6 @@ export default function DashboardPage() {
 
             setAuthChecked(true);
 
-            // Fetch profile only if not already loaded
             if (!profile) {
                 await fetchProfile(session.user.id);
             }
@@ -112,10 +112,10 @@ export default function DashboardPage() {
             case "artworks":
                 return <ArtworkSection />;
             case "payouts":
-                return <ArtistPayoutSection />;
+                return isArtist() ? <ArtistPayoutSection /> : null;
             case "cart":
                 return <CartSection />;
-            case "sale": // Added case for "sale"
+            case "sale":
                 return <SaleSection />;
             default:
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
@@ -123,38 +123,70 @@ export default function DashboardPage() {
     };
 
     const handleWishlistClick = () => {
-        setActiveSection("wishlist"); // Navigate to wishlist section
+        setActiveSection("wishlist");
     };
 
     const getSectionTitle = () => {
         switch (activeSection) {
-            case "dashboard": return "Dashboard Overview";
-            case "wishlist": return "My Wishlist";
-            case "bids": return "My Bids";
-            case "upload": return "Upload Artwork";
-            case "support": return "Support Center";
-            case "profile": return "My Profile";
-            case "artworks": return "My Artworks";
-            case "payouts": return "Artist Payouts";
-            case "cart": return "My Cart";
-            case "sale": return "My Sales"; // Added title for "sale"
-            default: return "Dashboard";
+            case "dashboard":
+                return isAdmin() ? "Admin Dashboard" : "My Dashboard";
+            case "wishlist":
+                return "My Wishlist";
+            case "bids":
+                return isAdmin() ? "All Bids" : "My Bids";
+            case "upload":
+                return "Upload Artwork";
+            case "support":
+                return "Support Center";
+            case "profile":
+                return "My Profile";
+            case "artworks":
+                return isAdmin() ? "Artwork Management" : "My Artworks";
+            case "payouts":
+                return isArtist() ? "My Payouts" : "Payouts";
+            case "cart":
+                return "My Cart";
+            case "sale":
+                return isAdmin() ? "Sales Management" : "My Sales";
+            default:
+                return "Dashboard";
         }
     };
 
     const getSectionDescription = () => {
         switch (activeSection) {
-            case "dashboard": return "Welcome back! Here is your activity overview";
-            case "wishlist": return "Manage your saved items";
-            case "bids": return "Track your active and past bids";
-            case "upload": return "Upload your artwork and details";
-            case "support": return "Get help with your account";
-            case "profile": return "View and edit your profile";
-            case "artworks": return "View and manage your artworks";
-            case "payouts": return "Manage your earnings and payment methods";
-            case "cart": return "Review and manage items in your cart";
-            case "sale": return "Track and manage your sales"; // Added description for "sale"
-            default: return "";
+            case "dashboard":
+                return isAdmin()
+                    ? "Admin overview of platform activity"
+                    : "Welcome back! Here is your activity overview";
+            case "wishlist":
+                return "Manage your saved items";
+            case "bids":
+                return isAdmin()
+                    ? "View and manage all bids on the platform"
+                    : "Track your active and past bids";
+            case "upload":
+                return "Upload your artwork and details";
+            case "support":
+                return "Get help with your account";
+            case "profile":
+                return "View and edit your profile";
+            case "artworks":
+                return isAdmin()
+                    ? "Manage all artworks on the platform"
+                    : "View and manage your artworks";
+            case "payouts":
+                return isArtist()
+                    ? "Manage your earnings and payment methods"
+                    : "View and manage payouts";
+            case "cart":
+                return "Review and manage items in your cart";
+            case "sale":
+                return isAdmin()
+                    ? "View and manage all sales on the platform"
+                    : "Track and manage your sales";
+            default:
+                return "";
         }
     };
 
@@ -166,10 +198,11 @@ export default function DashboardPage() {
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
                 isLoading={!authChecked || profileLoading}
+                isAdmin={isAdmin()}
+                isArtist={isArtist()}
             />
 
             <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-                {/* Header with no padding container */}
                 <DashboardHeader
                     title={getSectionTitle()}
                     description={getSectionDescription()}
@@ -182,9 +215,9 @@ export default function DashboardPage() {
                     onWishlistClick={handleWishlistClick}
                     wishlistCount={5}
                     activeSection={activeSection}
+                    isAdmin={isAdmin()}
                 />
 
-                {/* Main content - padding can be handled by individual sections */}
                 <main className={`flex-1 overflow-auto p-4 md:p-6 ${sidebarOpen ? 'lg:opacity-100 opacity-70' : 'opacity-100'}`}>
                     {renderSection()}
                 </main>

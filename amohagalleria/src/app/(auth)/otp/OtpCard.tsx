@@ -16,10 +16,9 @@ interface OtpCardProps {
     isSubmitting: boolean
     resendOtp: () => void
     otpTimer: number
-    setShowOtpCard?: (show: boolean) => void
-    setShowPasswordCard?: (show: boolean) => void
     email?: string
 }
+
 export default function OtpCard({
     onOtpSubmit,
     isSubmitting,

@@ -15,8 +15,6 @@ import SignupCard from "../profile-setup/ProfileSetup";
 import OtpCard from "../otp/OtpCard";
 import { useAuthStore } from "@/stores/auth/authStore";
 import { useUploadStore } from "@/stores/upload/uploadStore";
-import { AuthService } from "@/stores/auth/authService";
-import { isClient } from "@/lib/supabase"; // Import the isClient helper
 import {
     loginFormSchema,
     LoginFormValues,
@@ -32,6 +30,7 @@ export default function AuthPage() {
         isLoading,
         error,
         sessionChecked,
+        profileExists,
         checkSession,
         sendOtp,
         verifyOtp,
@@ -45,6 +44,7 @@ export default function AuthPage() {
     const [otpTimer, setOtpTimer] = useState(30);
     const [isProfileSetup, setIsProfileSetup] = useState(false);
     const [hasUploadIntent, setHasUploadIntent] = useState(false);
+    const [redirectAfterSetup, setRedirectAfterSetup] = useState(false);
 
     const loginForm = useForm<LoginFormValues>({
         resolver: zodResolver(loginFormSchema),
@@ -75,35 +75,38 @@ export default function AuthPage() {
         }
     }, [error, clearError]);
 
+    // Enhanced effect to handle user state changes
     useEffect(() => {
         if (user && sessionChecked) {
-            handleUserRedirect();
+            // Only handle redirection if we know the profile status
+            if (profileExists !== null) {
+                if (profileExists === false) {
+                    // User needs to complete profile setup
+                    prepareProfileSetup();
+                } else if (!redirectAfterSetup) {
+                    // User has a profile, redirect appropriately
+                    handleRedirection();
+                }
+            }
         }
-    }, [user, sessionChecked]);
+    }, [user, sessionChecked, profileExists, redirectAfterSetup]);
 
-    const handleUserRedirect = async () => {
-        if (!user) return;
+    const prepareProfileSetup = () => {
+        if (user?.email) {
+            signupForm.setValue("email", user.email);
+            setIsProfileSetup(true);
+            setIsLogin(false);
+            setShowOtpCard(false);
+        }
+    };
 
-        try {
-            const profileExists = await AuthService.checkProfileExists(user.id);
-
-            if (!profileExists) {
-                signupForm.setValue("email", user.email || "");
-                setIsProfileSetup(true);
-                setIsLogin(false);
-                return;
-            }
-
-            if (hasUploadIntent) {
-                handleUploadIntent();
-            } else {
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectUrl = urlParams.get("redirect") || "/dashboard";
-                window.location.href = redirectUrl;
-            }
-        } catch (error) {
-            toast.error("Failed to determine user state");
-            console.error("Redirect error:", error);
+    const handleRedirection = () => {
+        if (hasUploadIntent) {
+            handleUploadIntent();
+        } else {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectUrl = urlParams.get("redirect") || "/dashboard";
+            router.push(redirectUrl);
         }
     };
 
@@ -148,14 +151,8 @@ export default function AuthPage() {
             await verifyOtp(loginForm.getValues("email"), values.otp);
             toast.success("OTP verified successfully!");
 
-            // Handle redirection after OTP verification
-            if (hasUploadIntent) {
-                handleUploadIntent();
-            } else {
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectUrl = urlParams.get("redirect") || "/dashboard";
-                window.location.href = redirectUrl;
-            }
+            // Don't redirect yet - the useEffect will handle redirection based on profileExists state
+            // This prevents the race condition where the redirect happens before checking profile status
         } catch (error) {
             console.error("OTP verification error:", error);
             if (error instanceof Error) {
@@ -171,16 +168,10 @@ export default function AuthPage() {
     const handleSignupSubmit = async (data: SignupFormValues) => {
         try {
             await completeProfileSetup(data);
+            setRedirectAfterSetup(true);
             toast.success("Profile setup completed successfully!");
 
-            // Handle redirection after profile setup
-            if (hasUploadIntent) {
-                handleUploadIntent();
-            } else {
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectUrl = urlParams.get("redirect") || "/dashboard";
-                window.location.href = redirectUrl;
-            }
+            // After successful profile setup, let the useEffect handle redirection
         } catch (error) {
             console.error("Profile setup error:", error);
             if (error instanceof Error) {
@@ -246,7 +237,7 @@ export default function AuthPage() {
             <div className="w-full max-w-md mx-auto relative">
                 {/* Login Card */}
                 <div
-                    className={`absolute w-full transition-all duration-500 ease-in-out transform ${isLogin && !showOtpCard ? "translate-x-0 opacity-100 z-10" : "-translate-x-full opacity-0 -z-10"
+                    className={`absolute w-full transition-all duration-500 ease-in-out transform ${isLogin && !showOtpCard && !isProfileSetup ? "translate-x-0 opacity-100 z-10" : "-translate-x-full opacity-0 -z-10"
                         }`}
                 >
                     <Card className="w-full shadow-lg">
@@ -313,14 +304,13 @@ export default function AuthPage() {
                         isSubmitting={isLoading}
                         resendOtp={resendOtp}
                         otpTimer={otpTimer}
-                        setShowOtpCard={setShowOtpCard}
                         email={loginForm.getValues("email")}
                     />
                 </div>
 
                 {/* Signup Card */}
                 <div
-                    className={`absolute w-full transition-all duration-500 ease-in-out transform ${!isLogin || isProfileSetup ? "translate-x-0 opacity-100 z-10" : "-translate-x-full opacity-0 -z-10"
+                    className={`absolute w-full transition-all duration-500 ease-in-out transform ${isProfileSetup ? "translate-x-0 opacity-100 z-10" : "-translate-x-full opacity-0 -z-10"
                         }`}
                 >
                     <SignupCard

@@ -24,7 +24,7 @@ export const ProfileService = {
         }
 
         return {
-            profile: profileData as ProfileData,
+            profile: profileData as unknown as ProfileData,
             userData: {
                 id: userData.user.id,
                 email: userData.user.email,
@@ -43,7 +43,7 @@ export const ProfileService = {
             .single();
 
         if (error) throw new Error(error.message);
-        return updatedProfile as ProfileData;
+        return updatedProfile as unknown as ProfileData;
     },
 
     updateUserData: async (userId: string, data: Partial<UserData>) => {

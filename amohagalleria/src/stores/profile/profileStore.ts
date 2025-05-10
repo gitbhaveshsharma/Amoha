@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { ProfileService } from "./profileService";
 import { ProfileData, UserData, ProfileState } from "@/types/profile";
 
-export const useProfileStore = create<ProfileState>((set) => ({
+export const useProfileStore = create<ProfileState>((set, get) => ({
     profile: null,
     userData: null,
     loading: false,
@@ -22,10 +22,20 @@ export const useProfileStore = create<ProfileState>((set) => ({
         }
     },
 
+    isAdmin: () => {
+        const { profile } = get();
+        return profile?.role === 'admin';
+    },
+
+    isArtist: () => {
+        const { profile } = get();
+        return profile?.role === 'artist';
+    },
+
     updateProfile: async (updatedData: Partial<ProfileData>) => {
         set({ loading: true, error: null });
         try {
-            const currentProfile = useProfileStore.getState().profile;
+            const currentProfile = get().profile;
             if (!currentProfile) throw new Error("No profile loaded");
 
             const updatedProfile = await ProfileService.updateProfile(currentProfile.id, updatedData);
@@ -42,7 +52,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
     updateUserData: async (updatedData: Partial<UserData>) => {
         set({ loading: true, error: null });
         try {
-            const currentUserData = useProfileStore.getState().userData;
+            const currentUserData = get().userData;
             if (!currentUserData) throw new Error("No user data loaded");
 
             const updatedUserData = await ProfileService.updateUserData(currentUserData.id, updatedData);
@@ -62,7 +72,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
             const avatarUrl = await ProfileService.uploadAvatar(file, userId);
 
             // Update the profile with the new avatar URL
-            const currentProfile = useProfileStore.getState().profile;
+            const currentProfile = get().profile;
             if (currentProfile) {
                 const updatedProfile = await ProfileService.updateProfile(currentProfile.id, { avatar_url: avatarUrl });
                 set({ profile: updatedProfile });

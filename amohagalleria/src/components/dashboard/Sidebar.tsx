@@ -64,7 +64,7 @@ const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading =
                         {isLoading ? (
                             <Skeleton className="h-6 w-32" />
                         ) : (
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Artist Dashboard</h2>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Dashboard</h2>
                         )}
                         <button
                             onClick={onClose}

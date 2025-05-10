@@ -15,8 +15,8 @@ export interface UserData {
     id: string;
     email?: string | null;
     phone?: string | null;
-    app_metadata?: Record<string, any>;
-    user_metadata?: Record<string, any>;
+    app_metadata?: Record<string, unknown>;
+    user_metadata?: Record<string, unknown>;
     created_at?: string;
 }
 
@@ -29,4 +29,6 @@ export interface ProfileState {
     updateProfile: (data: Partial<ProfileData>) => Promise<void>;
     updateUserData: (data: Partial<UserData>) => Promise<void>;
     uploadAvatar: (file: File, userId: string) => Promise<string>;
+    isAdmin: () => boolean;
+    isArtist: () => boolean;
 }
