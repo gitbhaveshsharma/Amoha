@@ -182,6 +182,7 @@ export const loadModel = async (): Promise<nsfwjs.NSFWJS> => {
  */
 export const analyzeImage = async (imageUrl: string, timeoutMs = 60000): Promise<NSFWResult> => {
     console.log(`Starting image analysis for: ${imageUrl}`);
+    console.log(`Setting timeout of ${timeoutMs}ms`);
 
     // Create a timeout promise
     const timeoutPromise = new Promise<NSFWResult>((_, reject) => {
@@ -205,15 +206,19 @@ export const analyzeImage = async (imageUrl: string, timeoutMs = 60000): Promise
                     image = await loadBrowserImage(imageUrl);
                 } else {
                     console.log('Loading image in server environment');
-                    image = await loadServerImage(imageUrl);
+                    image = await loadServerImage(imageUrl, tf);
                 }
 
                 console.log('Image loaded, starting classification');
                 let predictions: Classification[];
 
                 try {
-                    // Use tidy to auto-clean tensors
-                    predictions = await tf.tidy(() => model.classify(image));
+                    // Run classify outside of tidy to avoid "Promise inside tidy" error
+                    predictions = await model.classify(image);
+                    console.log('Classification complete with predictions:', predictions);
+                } catch (classifyErr) {
+                    console.error('Classification error:', classifyErr);
+                    throw classifyErr;
                 } finally {
                     // Explicitly dispose tensors to prevent memory leaks
                     if (image && !isBrowser() && typeof image.dispose === 'function') {
@@ -226,12 +231,12 @@ export const analyzeImage = async (imageUrl: string, timeoutMs = 60000): Promise
                     }
                 }
 
-                console.log('Classification complete with predictions:', predictions);
                 return processPredictions(predictions);
             })(),
             timeoutPromise
         ]);
 
+        console.log('✅ Image analysis completed:', result);
         return result;
     } catch (error) {
         console.error('❌ Image analysis failed:', error);
@@ -266,16 +271,15 @@ const loadBrowserImage = async (imageUrl: string): Promise<HTMLImageElement> => 
     });
 };
 
-// Server image loading with more robust error handling
-const loadServerImage = async (imageUrl: string): Promise<any> => {
+/**
+ * Improved server image loading with better error handling and multiple fallback strategies
+ */
+const loadServerImage = async (imageUrl: string, tf: any): Promise<any> => {
     console.log(`Loading server image from: ${imageUrl}`);
 
     try {
-        const tf = await getTF();
-
         // Load node-fetch if not available
-        const nodeFetch = await import('node-fetch');
-        const fetch = global.fetch || nodeFetch.default;
+        const fetch = global.fetch || (await import('node-fetch')).default;
 
         // Load the image via HTTP
         console.log('Fetching image data via HTTP');
@@ -288,15 +292,31 @@ const loadServerImage = async (imageUrl: string): Promise<any> => {
         const arrayBuffer = await response.arrayBuffer();
         console.log(`Image data fetched, buffer size: ${arrayBuffer.byteLength} bytes`);
 
+        // Determine image type from URL or response headers
+        const contentType = response.headers.get('content-type') || '';
+        const fileExt = imageUrl.split('.').pop()?.toLowerCase() || '';
+        console.log(`Image type: ${contentType}, File extension: ${fileExt}`);
+
+        // Main approach: Try to use the canvas method
         try {
-            // Try to use canvas approach first
-            const { createCanvas, loadImage } = await import('canvas');
+            const { createCanvas, Image } = await import('canvas');
+
+            // Create an Image object for loading
+            const img = new Image();
+
+            // Load image from buffer
             const buffer = Buffer.from(arrayBuffer);
-            const img = await loadImage(buffer);
+
+            // Use a promise to handle async loading
+            await new Promise((resolve, reject) => {
+                img.onload = () => resolve(undefined);
+                img.onerror = (err) => reject(new Error(`Failed to load image: ${err}`));
+                img.src = buffer;
+            });
 
             console.log('Image loaded with dimensions:', img.width, 'x', img.height);
 
-            // Match canvas dimensions to NSFWJS expected input size (224x224 or 299x299)
+            // Match canvas dimensions to NSFWJS expected input size
             const inputSize = 224; // Match the size used in model config
             const canvas = createCanvas(inputSize, inputSize);
             const ctx = canvas.getContext('2d');
@@ -310,7 +330,7 @@ const loadServerImage = async (imageUrl: string): Promise<any> => {
             // Get raw pixel data as Uint8ClampedArray
             const imageData = ctx.getImageData(0, 0, inputSize, inputSize);
 
-            // Convert to tensor properly - this is critical to fix the tensor shape error
+            // Convert to tensor properly
             return tf.browser.fromPixels(
                 {
                     data: new Uint8Array(imageData.data),
@@ -320,53 +340,83 @@ const loadServerImage = async (imageUrl: string): Promise<any> => {
                 3
             );
         } catch (canvasError) {
-            console.warn('Canvas approach failed, using direct buffer approach:', canvasError);
+            console.warn('Canvas approach failed, using Sharp library fallback:', canvasError);
 
-            // More reliable fallback: use jimp for image processing
+            // Use Sharp for image processing (recommended fallback)
             try {
-                const Jimp = await import('jimp');
-                const image = await Jimp.default.read(Buffer.from(arrayBuffer));
+                const Sharp = await import('sharp');
+                const sharp = Sharp.default;
 
-                // Resize to match expected input size
-                const inputSize = 224; // Match the size used in model config
-                image.resize(inputSize, inputSize);
+                const buffer = Buffer.from(arrayBuffer);
 
-                // Convert to buffer in RGB format
-                const buffer = new Uint8Array(inputSize * inputSize * 3);
-                let i = 0;
+                // Process the image with Sharp
+                const processedImageBuffer = await sharp(buffer)
+                    .resize(224, 224, { fit: 'fill' })
+                    .removeAlpha()
+                    .raw()
+                    .toBuffer({ resolveWithObject: true });
 
-                image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
-                    buffer[i++] = image.bitmap.data[idx + 0]; // R
-                    buffer[i++] = image.bitmap.data[idx + 1]; // G
-                    buffer[i++] = image.bitmap.data[idx + 2]; // B
-                });
+                const { data, info } = processedImageBuffer;
+                console.log('Image processed with Sharp:', info);
 
-                console.log('Image processed with Jimp, creating tensor');
+                // Convert to tensor
+                return tf.tensor3d(new Uint8Array(data), [info.height, info.width, 3]);
+            } catch (sharpError) {
+                console.warn('Sharp approach failed, using Jimp fallback:', sharpError);
 
-                // Create properly shaped tensor
-                return tf.tensor3d(buffer, [inputSize, inputSize, 3]);
-            } catch (jimpError) {
-                console.warn('Jimp approach failed, using basic tensor conversion:', jimpError);
+                // Try Jimp as another fallback
+                try {
+                    const Jimp = await import('jimp');
+                    const buffer = Buffer.from(arrayBuffer);
 
-                // Last resort fallback - may still fail for some images
-                return tf.tidy(() => {
-                    // Create a placeholder tensor with proper dimensions
-                    // Using a safer calculation for proper tensor shape
-                    const uint8Array = new Uint8Array(arrayBuffer);
+                    // In TypeScript, Jimp may not have a default export
+                    // We need to access the read method directly from the import
+                    const image = await Jimp.read(buffer);
 
-                    // For safety, resize to sqrt dimensions (assuming RGB)
-                    const size = Math.floor(Math.sqrt(uint8Array.length / 3));
-                    const newArray = new Uint8Array(size * size * 3);
+                    // Resize to match expected input size
+                    const inputSize = 224; // Match the size used in model config
+                    image.resize(inputSize, inputSize);
 
-                    // Copy as much data as we can safely fit
-                    for (let i = 0; i < Math.min(newArray.length, uint8Array.length); i++) {
-                        newArray[i] = uint8Array[i];
-                    }
+                    // Convert to buffer in RGB format
+                    const rgbBuffer = new Uint8Array(inputSize * inputSize * 3);
+                    let i = 0;
 
-                    // Create tensor with proper dimensions
-                    const tensor = tf.tensor3d(Array.from(newArray), [size, size, 3]);
-                    return tf.image.resizeBilinear(tensor, [224, 224]);
-                });
+                    image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
+                        rgbBuffer[i++] = image.bitmap.data[idx + 0]; // R
+                        rgbBuffer[i++] = image.bitmap.data[idx + 1]; // G
+                        rgbBuffer[i++] = image.bitmap.data[idx + 2]; // B
+                    });
+
+                    console.log('Image processed with Jimp, creating tensor');
+
+                    // Create properly shaped tensor
+                    return tf.tensor3d(rgbBuffer, [inputSize, inputSize, 3]);
+                } catch (jimpError) {
+                    console.warn('Jimp approach failed, using basic tensor conversion:', jimpError);
+
+                    // Last resort fallback - direct raw pixel conversion
+                    // This might not work for all image formats but provides a last attempt
+                    return tf.tidy(() => {
+                        const uint8Array = new Uint8Array(arrayBuffer);
+
+                        // Estimate image dimensions
+                        // If we know common formats like JPG/PNG we could parse headers
+                        // but for simplicity we'll just estimate square dimensions
+
+                        // For safety, resize to sqrt dimensions (assuming RGB)
+                        const pixelCount = uint8Array.length / 3;
+                        const size = Math.floor(Math.sqrt(pixelCount));
+
+                        // Create a square tensor with estimated dimensions
+                        const tensor = tf.tensor3d(
+                            Array.from(uint8Array.slice(0, size * size * 3)),
+                            [size, size, 3]
+                        );
+
+                        // Resize to expected model input size
+                        return tf.image.resizeBilinear(tensor, [224, 224]);
+                    });
+                }
             }
         }
     } catch (error) {
