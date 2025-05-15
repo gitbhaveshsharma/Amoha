@@ -1,3 +1,4 @@
+//api/artwork/review-processor/route.ts
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { ArtworkReviewPayload } from '@/types/artworkReview';
@@ -12,18 +13,23 @@ interface ArtworkReview {
         image_url: string;
         description: string;
         user_id: string;
+        status: string;
     };
 }
 
 interface ProcessedResult {
     artworkId: string;
     status: 'processed' | 'failed';
+    error?: string;
+    details?: any;
 }
+
+const PROCESSING_TIMEOUT = 240000; // 4 minutes
 
 export async function GET() {
     try {
-        // Get up to 15 queued reviews (with artwork data)
-        const { data: queuedReviews, error } = await supabase
+        // Get the single artwork that needs processing
+        const { data: artworkReview, error: fetchError } = await supabase
             .from('artwork_reviews')
             .select(`
         id,
@@ -31,80 +37,151 @@ export async function GET() {
         artworks(
           image_url,
           description,
-          user_id
+          user_id,
+          status
         )
       `)
             .eq('processing_status', 'queued')
             .order('created_at', { ascending: true })
-            .limit(15);
+            .limit(1)
+            .maybeSingle();
 
-        if (error) throw error;
-        if (!queuedReviews || queuedReviews.length === 0) {
-            return NextResponse.json({ message: 'No queued reviews to process' });
+        if (fetchError) throw fetchError;
+        if (!artworkReview) {
+            return NextResponse.json({
+                message: 'No artwork reviews to process',
+                status: 'skipped'
+            });
         }
 
-        // Update status to processing
+        // Mark as processing
         const { error: updateError } = await supabase
             .from('artwork_reviews')
-            .update({ processing_status: 'processing' })
-            .in('id', queuedReviews.map(r => r.id));
+            .update({
+                processing_status: 'processing',
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', validateArtworkReview(artworkReview).id);
 
         if (updateError) throw updateError;
 
-        // Process each review
-        const results: ProcessedResult[] = [];
-        for (const review of queuedReviews as unknown as ArtworkReview[]) {
-            try {
-                if (!review.artworks || !review.artworks.image_url || !review.artworks.description || !review.artworks.user_id) {
-                    throw new Error(`Invalid artwork data for review ${review.id}`);
-                }
-
-                const payload: ArtworkReviewPayload = {
-                    artworkId: review.artwork_id,
-                    imageUrl: review.artworks.image_url,
-                    description: review.artworks.description
-                };
-
-                const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/artwork-review`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error(`Failed to process artwork ${review.artwork_id}`);
-
-                results.push({
-                    artworkId: review.artwork_id,
-                    status: 'processed'
-                });
-            } catch (error) {
-                console.error(`Error processing artwork ${review.artwork_id}:`, error);
-                await supabase
-                    .from('artwork_reviews')
-                    .update({
-                        processing_status: 'failed',
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', review.id);
-
-                results.push({
-                    artworkId: review.artwork_id,
-                    status: 'failed'
-                });
-            }
-        }
+        // Process the single artwork
+        const result = await processReview(artworkReview as unknown as ArtworkReview);
 
         return NextResponse.json({
-            message: 'Processing completed',
-            processedCount: results.filter(r => r.status === 'processed').length,
-            results
+            message: result.status === 'processed'
+                ? 'Artwork processed successfully'
+                : 'Artwork processing failed',
+            ...result
         });
 
     } catch (error) {
-        console.error('Cron job failed:', error);
+        console.error('Processing failed:', error);
         return NextResponse.json(
-            { error: 'Failed to process reviews' },
+            {
+                status: 'error',
+                error: 'Failed to process artwork',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
             { status: 500 }
         );
+    }
+}
+
+function validateArtworkReview(data: any): ArtworkReview {
+    if (
+        typeof data.id === 'string' &&
+        typeof data.artwork_id === 'string' &&
+        data.artworks &&
+        typeof data.artworks.image_url === 'string' &&
+        typeof data.artworks.description === 'string' &&
+        typeof data.artworks.user_id === 'string' &&
+        typeof data.artworks.status === 'string'
+    ) {
+        return data as ArtworkReview;
+    }
+    throw new Error('Invalid artwork review data structure');
+}
+
+async function processReview(review: ArtworkReview): Promise<ProcessedResult> {
+    const timer = setTimeout(async () => {
+        await supabase
+            .from('artwork_reviews')
+            .update({
+                processing_status: 'failed',
+                updated_at: new Date().toISOString(),
+                error: 'Processing timeout'
+            })
+            .eq('id', review.id);
+    }, PROCESSING_TIMEOUT);
+
+    try {
+        // Validate artwork data
+        if (!review.artworks ||
+            !review.artworks.image_url ||
+            !review.artworks.description ||
+            !review.artworks.user_id) {
+            throw new Error('Incomplete artwork data');
+        }
+
+        // Skip if already processed
+        if (review.artworks.status !== 'pending_review') {
+            return {
+                artworkId: review.artwork_id,
+                status: 'processed',
+                error: 'Artwork already processed',
+                details: { currentStatus: review.artworks.status }
+            };
+        }
+
+        const payload: ArtworkReviewPayload = {
+            artworkId: review.artwork_id,
+            imageUrl: review.artworks.image_url,
+            description: review.artworks.description
+        };
+
+        // Call the review endpoint
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/artwork/artwork-review`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.INTERNAL_API_KEY}`
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(PROCESSING_TIMEOUT - 1000)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Review API returned ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        return {
+            artworkId: review.artwork_id,
+            status: 'processed',
+            details: result
+        };
+    } catch (error) {
+        console.error(`Error processing artwork ${review.artwork_id}:`, error);
+
+        await supabase
+            .from('artwork_reviews')
+            .update({
+                processing_status: 'failed',
+                updated_at: new Date().toISOString(),
+                error: error instanceof Error ? error.message : 'Processing failed'
+            })
+            .eq('id', review.id);
+
+        return {
+            artworkId: review.artwork_id,
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Processing failed',
+            details: error instanceof Error ? { stack: error.stack } : undefined
+        };
+    } finally {
+        clearTimeout(timer);
     }
 }

@@ -16,9 +16,13 @@ export interface ImageAnalysisResult {
 }
 
 export interface GrammarIssue {
+    id: string;
+    confidence: number;
     message: string;
     offset: number;
     length: number;
+    type: string;
+    shortMessage: string;
     replacements?: string[];
 }
 

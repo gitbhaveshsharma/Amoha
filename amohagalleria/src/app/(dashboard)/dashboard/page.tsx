@@ -12,28 +12,29 @@ import { ArtworkSection } from "@/components/dashboard/DashboardSections/Artwork
 import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection";
 import { CartSection } from "@/components/dashboard/DashboardSections/CartSection";
 import { SaleSection } from "@/components/dashboard/DashboardSections/SaleSection";
+import { SettingsSection } from "@/components/dashboard/DashboardSections/SettingsSection"; // Import the new SettingsSection
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { useProfileStore } from "@/stores/profile/profileStore";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type DashboardSection =
+export type DashboardSection =
     | "dashboard"
     | "wishlist"
     | "bids"
+    | "upload"
     | "support"
     | "profile"
-    | "upload"
     | "artworks"
     | "payouts"
     | "cart"
-    | "sale";
+    | "sale"
+    | "settings"; // Add "settings" to match the type in page.tsx
 
 export default function DashboardPage() {
     const [authChecked, setAuthChecked] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [activeSection, setActiveSection] = useState<DashboardSection>("dashboard");
-    const router = useRouter();
+    const [activeSection, setActiveSection] = useState<DashboardSection | undefined>("dashboard"); const router = useRouter();
 
     const {
         profile,
@@ -117,6 +118,8 @@ export default function DashboardPage() {
                 return <CartSection />;
             case "sale":
                 return <SaleSection />;
+            case "settings": // Add the new "settings" case
+                return <SettingsSection />;
             default:
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
         }
@@ -148,6 +151,8 @@ export default function DashboardPage() {
                 return "My Cart";
             case "sale":
                 return isAdmin() ? "Sales Management" : "My Sales";
+            case "settings": // Add title for "settings"
+                return "Settings";
             default:
                 return "Dashboard";
         }
@@ -185,6 +190,8 @@ export default function DashboardPage() {
                 return isAdmin()
                     ? "View and manage all sales on the platform"
                     : "Track and manage your sales";
+            case "settings": // Add description for "settings"
+                return "Manage your account settings and preferences";
             default:
                 return "";
         }
@@ -195,7 +202,7 @@ export default function DashboardPage() {
             <Sidebar
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
-                activeSection={activeSection}
+                activeSection={activeSection || "dashboard"}
                 setActiveSection={setActiveSection}
                 isLoading={!authChecked || profileLoading}
                 isAdmin={isAdmin()}
@@ -214,7 +221,8 @@ export default function DashboardPage() {
                     onCartClick={() => setActiveSection("cart")}
                     onWishlistClick={handleWishlistClick}
                     wishlistCount={5}
-                    activeSection={activeSection}
+
+                    activeSection={activeSection || "dashboard"}
                     isAdmin={isAdmin()}
                 />
 

@@ -1,3 +1,4 @@
+//types/currency.ts
 // First, let's define the possible currency codes as a type
 export type CurrencyCode = "USD" | "EUR" | "GBP" | "INR" | "JPY" | "CAD" | "AUD" | string; // string allows for other codes from DB
 
@@ -7,18 +8,20 @@ export interface DBCurrency {
     name: string;
     symbol: string;
     decimal_digits: number;
-    is_active?: boolean;
+    is_active: boolean; // Ensure this exists in the database model
     created_at?: string;
     updated_at?: string;
-    created_by?: string;
+    created_by?: string | null;
 }
 
 // Interface for the frontend application
 export interface Currency {
-    code: CurrencyCode;
-    name: string;
     symbol: string;
-    decimalDigits: number;
+    code: string;
+    name: string;
+    decimal_digits: number;
+    decimalDigits?: number; // Optional to match the schema
+    is_active?: boolean; // Add is_active to the Currency interface
 }
 
 // Helper type for the currencies record
@@ -32,5 +35,16 @@ export const toAppCurrency = (dbCurrency: DBCurrency): Currency => ({
     code: dbCurrency.code,
     name: dbCurrency.name,
     symbol: dbCurrency.symbol,
-    decimalDigits: dbCurrency.decimal_digits
+    decimalDigits: dbCurrency.decimal_digits,
+    decimal_digits: dbCurrency.decimal_digits,
+    is_active: dbCurrency.is_active // Map is_active correctly
+});
+
+// Utility function to convert app currency to DB currency
+export const toDbCurrency = (currency: Currency): DBCurrency => ({
+    code: currency.code,
+    name: currency.name,
+    symbol: currency.symbol,
+    decimal_digits: currency.decimalDigits ?? 0,
+    is_active: currency.is_active ?? true, // Default to true if undefined
 });

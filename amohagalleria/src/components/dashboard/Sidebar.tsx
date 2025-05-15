@@ -8,12 +8,12 @@ import {
     ImageIcon,
     Wallet,
     DollarSign,
-    // Settings,
+    Settings,
     X,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type DashboardSection = "dashboard" | "bids" | "support" | "upload" | "artworks" | "payouts" | "sales";
+type DashboardSection = "dashboard" | "bids" | "support" | "upload" | "artworks" | "payouts" | "sales" | "settings";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -37,7 +37,7 @@ const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading =
 
     const secondarySections = [
         { label: "Upload New", value: "upload", icon: UploadCloud },
-        // { label: "Settings", value: "settings", icon: Settings },
+        { label: "Settings", value: "settings", icon: Settings },
         { label: "Support", value: "support", icon: LifeBuoy },
     ];
 

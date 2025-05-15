@@ -29,6 +29,7 @@ interface DashboardHeaderProps {
         avatar_url?: string;
         role?: string;
     };
+
     onMenuToggle: () => void;
     onProfileClick: () => void;
     onCartClick?: () => void;
@@ -38,7 +39,7 @@ interface DashboardHeaderProps {
     cartCount?: number;
     wishlistCount?: number;
     notificationsLoading?: boolean;
-    activeSection?: DashboardSection;
+    activeSection: DashboardSection;
     isAdmin?: boolean;
     isArtist?: boolean;
 }
