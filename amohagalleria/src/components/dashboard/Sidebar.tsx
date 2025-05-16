@@ -10,10 +10,10 @@ import {
     DollarSign,
     Settings,
     X,
+    Users,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-
-type DashboardSection = "dashboard" | "bids" | "support" | "upload" | "artworks" | "payouts" | "sales" | "settings";
+import { DashboardSection } from "@/types/dashboard";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -21,24 +21,31 @@ interface SidebarProps {
     activeSection: DashboardSection;
     setActiveSection: (section: DashboardSection) => void;
     isLoading?: boolean;
+    isAdmin?: boolean;
 }
 
-const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading = false }: SidebarProps) => {
+const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading = false, isAdmin = false }: SidebarProps) => {
     const currentYear = new Date().getFullYear();
 
     // Grouped sections for better organization
     const primarySections = [
         { label: "Dashboard", value: "dashboard", icon: LayoutDashboard },
-        { label: "My Artworks", value: "artworks", icon: ImageIcon },
-        { label: "My Bids", value: "bids", icon: Gavel },
+        { label: isAdmin ? "Artworks" : "My Artworks", value: "artworks", icon: ImageIcon },
+        { label: isAdmin ? "Bids" : "My Bids", value: "bids", icon: Gavel },
         { label: "Sales", value: "sales", icon: DollarSign },
         { label: "Payouts", value: "payouts", icon: Wallet },
     ];
 
+    // Only include "Upload New" for non-admins, "Settings" only for admins
     const secondarySections = [
-        { label: "Upload New", value: "upload", icon: UploadCloud },
-        { label: "Settings", value: "settings", icon: Settings },
+        ...(!isAdmin ? [{ label: "Upload New", value: "upload", icon: UploadCloud }] : []),
+        ...(isAdmin ? [{ label: "Settings", value: "settings", icon: Settings }] : []),
         { label: "Support", value: "support", icon: LifeBuoy },
+    ];
+
+    // User management section for admins
+    const adminSections = [
+        { label: "User Management", value: "user-management", icon: Users },
     ];
 
     return (
@@ -145,6 +152,39 @@ const Sidebar = ({ isOpen, onClose, activeSection, setActiveSection, isLoading =
                                         );
                                     })}
                                 </div>
+
+                                {isAdmin && (
+                                    <div className="space-y-1">
+                                        <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                            Admin
+                                        </h3>
+                                        {adminSections.map((section) => {
+                                            const Icon = section.icon;
+                                            return (
+                                                <button
+                                                    key={section.value}
+                                                    onClick={() => {
+                                                        setActiveSection(section.value as DashboardSection);
+                                                        onClose();
+                                                    }}
+                                                    className={cn(
+                                                        "flex items-center w-full p-3 text-left rounded-lg transition-colors duration-200",
+                                                        "hover:bg-[#a35339]/10 hover:text-[#a35339] dark:hover:bg-[#a35339]/20 dark:hover:text-[#a35339]",
+                                                        activeSection === section.value
+                                                            ? "bg-[#a35339]/20 text-[#a35339] font-medium dark:bg-[#a35339]/30 dark:text-[#a35339]"
+                                                            : "text-gray-600 dark:text-gray-400"
+                                                    )}
+                                                >
+                                                    <Icon className="h-5 w-5 mr-3" />
+                                                    {section.label}
+                                                    {activeSection === section.value && (
+                                                        <span className="ml-auto h-2 w-2 rounded-full bg-[#a35339]" />
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </>
                         )}
                     </nav>

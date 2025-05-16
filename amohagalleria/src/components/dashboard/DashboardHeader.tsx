@@ -8,18 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { NotificationBell } from "../notifications/NotificationBell";
 import { cn } from "@/lib/utils";
-
-type DashboardSection =
-    | "dashboard"
-    | "wishlist"
-    | "bids"
-    | "support"
-    | "profile"
-    | "upload"
-    | "artworks"
-    | "payouts"
-    | "cart"
-    | "sale";
+import { DashboardSection } from "@/types/dashboard";
 
 interface DashboardHeaderProps {
     title: string;
@@ -55,7 +44,6 @@ export function DashboardHeader({
     onSignOut,
     loading = false,
     cartCount = 0,
-    // wishlistCount = 0,
     notificationsLoading = false,
     activeSection,
     isAdmin = false,
@@ -127,11 +115,6 @@ export function DashboardHeader({
                             onClick={onWishlistClick}
                         >
                             <Heart className="h-5 w-5" />
-                            {/* {wishlistCount > 0 && (
-                                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0">
-                                    {wishlistCount}
-                                </Badge>
-                            )} */}
                             <span className="hidden md:inline ml-2">Wishlist</span>
                         </Button>
                     ))}

@@ -12,24 +12,13 @@ import { ArtworkSection } from "@/components/dashboard/DashboardSections/Artwork
 import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection";
 import { CartSection } from "@/components/dashboard/DashboardSections/CartSection";
 import { SaleSection } from "@/components/dashboard/DashboardSections/SaleSection";
-import { SettingsSection } from "@/components/dashboard/DashboardSections/SettingsSection"; // Import the new SettingsSection
+import { SettingsSection } from "@/components/dashboard/DashboardSections/SettingsSection";
+import { UserManagementSection } from "@/components/dashboard/DashboardSections/UserManagementSection";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { useProfileStore } from "@/stores/profile/profileStore";
 import { Skeleton } from "@/components/ui/skeleton";
-
-export type DashboardSection =
-    | "dashboard"
-    | "wishlist"
-    | "bids"
-    | "upload"
-    | "support"
-    | "profile"
-    | "artworks"
-    | "payouts"
-    | "cart"
-    | "sale"
-    | "settings"; // Add "settings" to match the type in page.tsx
+import { DashboardSection } from "@/types/dashboard";
 
 export default function DashboardPage() {
     const [authChecked, setAuthChecked] = useState(false);
@@ -113,13 +102,15 @@ export default function DashboardPage() {
             case "artworks":
                 return <ArtworkSection />;
             case "payouts":
-                return isArtist() ? <ArtistPayoutSection /> : null;
+                return <ArtistPayoutSection />;
             case "cart":
                 return <CartSection />;
-            case "sale":
+            case "sales": // Changed from "sale" to "sales"
                 return <SaleSection />;
-            case "settings": // Add the new "settings" case
+            case "settings":
                 return <SettingsSection />;
+            case "user-management":
+                return <UserManagementSection />;
             default:
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
         }
@@ -146,13 +137,15 @@ export default function DashboardPage() {
             case "artworks":
                 return isAdmin() ? "Artwork Management" : "My Artworks";
             case "payouts":
-                return isArtist() ? "My Payouts" : "Payouts";
+                return isAdmin() ? "Payouts" : "My Payouts";
             case "cart":
                 return "My Cart";
-            case "sale":
+            case "sales": // Changed from "sale" to "sales"
                 return isAdmin() ? "Sales Management" : "My Sales";
-            case "settings": // Add title for "settings"
+            case "settings":
                 return "Settings";
+            case "user-management":
+                return "User Management";
             default:
                 return "Dashboard";
         }
@@ -181,17 +174,19 @@ export default function DashboardPage() {
                     ? "Manage all artworks on the platform"
                     : "View and manage your artworks";
             case "payouts":
-                return isArtist()
-                    ? "Manage your earnings and payment methods"
-                    : "View and manage payouts";
+                return isAdmin()
+                    ? "View and manage payouts "
+                    : "Manage your earnings and payment methods";
             case "cart":
                 return "Review and manage items in your cart";
-            case "sale":
+            case "sales": // Changed from "sale" to "sales"
                 return isAdmin()
                     ? "View and manage all sales on the platform"
                     : "Track and manage your sales";
-            case "settings": // Add description for "settings"
+            case "settings":
                 return "Manage your account settings and preferences";
+            case "user-management":
+                return "Manage user accounts and permissions";
             default:
                 return "";
         }
@@ -206,7 +201,7 @@ export default function DashboardPage() {
                 setActiveSection={setActiveSection}
                 isLoading={!authChecked || profileLoading}
                 isAdmin={isAdmin()}
-                isArtist={isArtist()}
+
             />
 
             <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
