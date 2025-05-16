@@ -6,25 +6,41 @@ import { ROLE_OPTIONS } from "@/lib/constants/roles";
 import { useUserManagementStore } from "@/stores/admin/userManagement/userManagementStore";
 import type { User } from "@/stores/admin/userManagement/userManagementService";
 
+import { toast } from "react-toastify";
+
 type UserActionsProps = {
     user: User;
 };
-
 export function UserActions({ user }: UserActionsProps) {
     const { updateUserRole, suspendUser, unsuspendUser } = useUserManagementStore();
 
     const handleRoleChange = async (role: "artist" | "bidder") => {
         if (role !== user.role) {
-            await updateUserRole(user.user_id, role);
+            try {
+                await updateUserRole(user.user_id, role);
+                toast.success(`Role updated to ${role}`);
+            } catch (error) {
+                toast.error("Failed to update role");
+            }
         }
     };
 
     const handleSuspend = async () => {
-        await suspendUser(user.user_id);
+        try {
+            await suspendUser(user.user_id);
+            toast.success("User suspended successfully");
+        } catch (error) {
+            toast.error("Failed to suspend user");
+        }
     };
 
     const handleUnsuspend = async () => {
-        await unsuspendUser(user.user_id);
+        try {
+            await unsuspendUser(user.user_id);
+            toast.success("User unsuspended successfully");
+        } catch (error) {
+            toast.error("Failed to unsuspend user");
+        }
     };
 
     return (

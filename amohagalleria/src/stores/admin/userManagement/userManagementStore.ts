@@ -1,4 +1,4 @@
-// src/stores/useUserManagementStore.ts
+// src/stores/admin/userManagement/userManagementStore.ts
 import { create } from "zustand";
 import { UserManagementService, type User } from "./userManagementService";
 import type { Role } from "@/lib/constants/roles";
@@ -7,18 +7,29 @@ type UserManagementState = {
     users: User[];
     loading: boolean;
     error: string | null;
+    filters: {
+        role?: string;
+        status?: string;
+        startDate?: string;
+        endDate?: string;
+        search?: string;
+    };
     fetchUsers: () => Promise<void>;
+    fetchFilteredUsers: () => Promise<void>;
     updateUserRole: (userId: string, role: Role) => Promise<void>;
     suspendUser: (userId: string) => Promise<void>;
     unsuspendUser: (userId: string) => Promise<void>;
     createUser: (email: string, role: Role, name: string) => Promise<void>;
     clearError: () => void;
+    setFilters: (filters: Partial<UserManagementState['filters']>) => void;
+    resetFilters: () => void;
 };
 
-export const useUserManagementStore = create<UserManagementState>((set) => ({
+export const useUserManagementStore = create<UserManagementState>((set, get) => ({
     users: [],
     loading: false,
     error: null,
+    filters: {},
 
     fetchUsers: async () => {
         set({ loading: true, error: null });
@@ -28,6 +39,19 @@ export const useUserManagementStore = create<UserManagementState>((set) => ({
         } catch (error) {
             set({
                 error: error instanceof Error ? error.message : "Failed to fetch users",
+                loading: false,
+            });
+        }
+    },
+
+    fetchFilteredUsers: async () => {
+        set({ loading: true, error: null });
+        try {
+            const users = await UserManagementService.fetchFilteredUsers(get().filters);
+            set({ users, loading: false });
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch filtered users",
                 loading: false,
             });
         }
@@ -104,4 +128,11 @@ export const useUserManagementStore = create<UserManagementState>((set) => ({
 
     clearError: () => set({ error: null }),
 
+    setFilters: (filters) => set((state) => ({ filters: { ...state.filters, ...filters } })),
+
+    resetFilters: () => set({ filters: {} }),
 }));
+
+function get() {
+    throw new Error("Function not implemented.");
+}

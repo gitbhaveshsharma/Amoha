@@ -17,12 +17,6 @@ export function UserManagement() {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-                <AddUserDialog>
-                    <Button size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add User
-                    </Button>
-                </AddUserDialog>
             </CardHeader>
             <CardContent>
                 {error ? (
