@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { ImageIcon, X, Loader2 } from "lucide-react";
@@ -58,6 +58,13 @@ export const EditArtworkModal = ({
         },
     }) as unknown as ReturnType<typeof useForm<ArtworkFormValues>>;
 
+    const handleClose = useCallback(() => {
+        setPreviewUrl(artwork.image_url || null);
+        setNewImageFile(null);
+        form.reset();
+        onClose();
+    }, [artwork.image_url, form, onClose]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
@@ -66,7 +73,7 @@ export const EditArtworkModal = ({
         };
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
-    }, []);
+    }, [handleClose]);
 
     useEffect(() => {
         if (currencies.length === 0) {
@@ -114,13 +121,6 @@ export const EditArtworkModal = ({
             form.setValue("image", files, { shouldValidate: true });
             form.clearErrors("image");
         }
-    };
-
-    const handleClose = () => {
-        setPreviewUrl(artwork.image_url || null);
-        setNewImageFile(null);
-        form.reset();
-        onClose();
     };
 
     const onSubmit = async (values: ArtworkFormValues) => {

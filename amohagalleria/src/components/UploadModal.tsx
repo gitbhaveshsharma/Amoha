@@ -1,7 +1,7 @@
 // components/UploadModal.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { ImageIcon, UploadCloud, X } from "lucide-react";
@@ -55,6 +55,24 @@ export const UploadModal = () => {
         },
     }) as unknown as ReturnType<typeof useForm<ArtworkFormValues>>;
 
+    const handleCloseAll = useCallback(() => {
+        setShowSuccess(false);
+        closeUploadModal();
+        resetStore();
+        form.reset();
+        setPreviewUrl(null);
+    }, [closeUploadModal, resetStore, form, setPreviewUrl]);
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            setPreviewUrl(URL.createObjectURL(file));
+            form.setValue("image", files, { shouldValidate: true });
+            form.clearErrors("image");
+        }
+    };
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
@@ -63,7 +81,8 @@ export const UploadModal = () => {
         };
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
-    }, []);
+    }, [handleCloseAll]);
+
     useEffect(() => {
         if (currencies.length === 0) {
             fetchCurrencies();
@@ -78,25 +97,7 @@ export const UploadModal = () => {
             }, 5000);
             return () => clearTimeout(timer);
         }
-    }, [success]);
-
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            const file = files[0];
-            setPreviewUrl(URL.createObjectURL(file));
-            form.setValue("image", files, { shouldValidate: true });
-            form.clearErrors("image");
-        }
-    };
-
-    const handleCloseAll = () => {
-        setShowSuccess(false);
-        closeUploadModal();
-        resetStore();
-        form.reset();
-        setPreviewUrl(null);
-    };
+    }, [success, handleCloseAll]);
 
     const onSubmit = async (values: ArtworkFormValues) => {
         if (!session?.user?.id) return;
@@ -422,4 +423,4 @@ export const UploadModal = () => {
             )}
         </>
     );
-};
+}

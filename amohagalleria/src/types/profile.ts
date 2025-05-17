@@ -8,6 +8,14 @@ export interface ProfileData {
     address?: string;
     avatar_url?: string;
     created_at: string;
+    gender?: string;
+    pronouns?: string[];
+    date_of_birth?: string;
+    country?: string;
+    state?: string;
+    city?: string;
+    postal_code?: string;
+    phone_number?: string;
     updated_at?: string;
 }
 

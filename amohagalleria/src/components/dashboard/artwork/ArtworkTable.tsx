@@ -32,6 +32,7 @@ import { format } from "date-fns";
 import { ArtworkFilter } from "./ArtworkFilter";
 import { Badge } from "@/components/ui/badge";
 import { ProfileData } from "@/types/profile";
+import Image from "next/image";
 
 // Add a type for artist profile cache
 interface ArtistProfiles {
@@ -97,16 +98,16 @@ export const ArtworkTable = () => {
     useEffect(() => {
         const fetchArtistProfiles = async () => {
             const uniqueArtistIds = [...new Set(artworks.map(artwork => artwork.user_id))];
-            
+
             // Only fetch profiles that we don't have already
             const artistIdsToFetch = uniqueArtistIds.filter(id => !artistProfiles[id]);
-            
+
             if (artistIdsToFetch.length === 0) return;
-            
+
             const profileService = await import('@/stores/profile/profileService').then(m => m.ProfileService);
-            
+
             const newProfiles: ArtistProfiles = { ...artistProfiles };
-            
+
             // Fetch each artist profile
             await Promise.all(artistIdsToFetch.map(async (artistId) => {
                 try {
@@ -117,10 +118,10 @@ export const ArtworkTable = () => {
                     newProfiles[artistId] = null; // Mark as failed to prevent repeated fetches
                 }
             }));
-            
+
             setArtistProfiles(newProfiles);
         };
-        
+
         if (artworks.length > 0) {
             fetchArtistProfiles();
         }
@@ -248,10 +249,12 @@ export const ArtworkTable = () => {
                                 <TableRow key={artwork.id}>
                                     <TableCell>
                                         {artwork.image_url ? (
-                                            <img
+                                            <Image
                                                 src={artwork.image_url}
                                                 alt={artwork.title}
                                                 className="h-12 w-12 object-cover rounded"
+                                                width={48}
+                                                height={48}
                                             />
                                         ) : (
                                             <div className="h-12 w-12 bg-gray-100 rounded flex items-center justify-center">

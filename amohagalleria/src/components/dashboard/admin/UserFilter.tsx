@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, X } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useUserManagementStore } from '@/stores/admin/userManagement/userManagementStore';
@@ -34,7 +34,6 @@ export const UserFilter = () => {
     const {
         filters,
         setFilters,
-        resetFilters,
         loading,
     } = useUserManagementStore();
 
@@ -60,15 +59,6 @@ export const UserFilter = () => {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Filters</h3>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={resetFilters}
-                    disabled={loading}
-                >
-                    <X className="mr-2 h-4 w-4" />
-                    Clear
-                </Button>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

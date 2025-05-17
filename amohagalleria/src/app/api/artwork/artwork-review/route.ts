@@ -1,6 +1,6 @@
 // api/artwork/artwork-review/route.ts
 import { NextResponse } from 'next/server';
-import { analyzeImage, NSFWResult } from '@/lib/nsfwjs/classifier';
+import { analyzeImage } from '@/lib/nsfwjs/classifier';
 import { analyzeText } from './textReviewService';
 import { supabase } from '@/lib/supabase';
 import { ArtworkReviewPayload } from '@/types/artworkReview';

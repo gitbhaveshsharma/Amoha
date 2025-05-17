@@ -131,7 +131,7 @@ export function WishlistSection() {
         }
     };
 
-    const handleMakeOffer = (artworkId: string) => {
+    const handleMakeOffer = () => {
         toast.info("Make offer functionality coming soon!");
     };
 

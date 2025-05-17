@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { SaleWithArtwork } from '@/types/sale';
+import { Artwork } from '@/types';
 
 export const saleService = {
     async getSalesByArtist(artistId: string): Promise<SaleWithArtwork[]> {
@@ -19,30 +20,49 @@ export const saleService = {
 
         const artworkIds = artworks.map(artwork => artwork.id);
 
-        // Then get sales only for these artworks
-        const { data: sales, error: salesError } = await supabase
+        // Then get sales for these artworks with proper join
+        const { data: salesData, error: salesError } = await supabase
             .from('sales')
-            .select(`
-        *,
-        artwork:artwork_id (
-          id,
-          title,
-          user_id,
-          image_url
-        )
-      `)
+            .select('*')
             .in('artwork_id', artworkIds)
-            .order('sold_at', { ascending: false });
+            .order('sold_at', { ascending: false }) as { data: { artwork_id: string }[] | null, error: Error | null };
 
         if (salesError) {
             throw new Error(salesError.message);
         }
 
-        // Double-check ownership (just in case)
-        const filteredSales = sales.filter(sale =>
-            sale.artwork?.user_id === artistId
-        ) as SaleWithArtwork[];
+        // Fetch associated artwork details separately
+        const sales = await Promise.all(
+            (salesData || []).map(async (sale) => {
+                const { data: artwork, error: artworkError } = await supabase
+                    .from('artworks')
+                    .select('id, title, user_id, image_url')
+                    .eq('id', sale.artwork_id)
+                    .single();
 
-        return filteredSales;
-    },
+                if (artworkError || !artwork) {
+                    console.error(`Error fetching artwork for sale with artwork_id ${sale.artwork_id}:`, artworkError?.message || 'Artwork not found');
+                    return null;
+                }
+
+                // Ensure artwork belongs to the artist (just in case)
+                if ((artwork as Artwork).user_id !== artistId) {
+                    return null;
+                }
+
+                return {
+                    ...sale,
+                    artwork: {
+                        id: artwork.id,
+                        title: artwork.title,
+                        user_id: artwork.user_id,
+                        image_url: artwork.image_url
+                    } as Pick<Artwork, 'id' | 'title' | 'user_id' | 'image_url'>
+                } as SaleWithArtwork;
+            })
+        );
+
+        // Filter out any nulls from errors
+        return sales.filter((sale): sale is SaleWithArtwork => sale !== null);
+    }
 };

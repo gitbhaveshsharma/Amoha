@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { ImageIcon, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useArtworkStore } from "@/stores/artwork/artworkStore";
+import Image from "next/image";
 
 interface ArtworkGridProps {
     artworks: Artwork[];
@@ -57,10 +58,12 @@ export const ArtworkGrid = ({
                             >
                                 <div className="relative">
                                     {artwork.image_url ? (
-                                        <img
+                                        <Image
                                             src={artwork.image_url}
                                             alt={artwork.title}
                                             className="w-full h-48 object-cover"
+                                            width={400}
+                                            height={192}
                                         />
                                     ) : (
                                         <div className="w-full h-48 bg-gray-100 flex items-center justify-center">

@@ -34,7 +34,8 @@ export async function migrateGuestCart(userId: string) {
             return;
         }
 
-        let guestItems = responseData.cart;
+        // Changed from let to const since it's never reassigned
+        const guestItems = responseData.cart;
         console.log('Raw guest cart items:', guestItems);
 
         // Handle both formats - array of objects or array of IDs
@@ -117,7 +118,7 @@ export async function migrateGuestCart(userId: string) {
 
         toast.success(`${itemsToMigrate.length} cart items migrated to your account`);
         console.log('Cart migration completed successfully');
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Cart migration failed:', error);
         toast.error('Failed to migrate cart items');
     }

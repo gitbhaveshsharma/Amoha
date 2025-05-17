@@ -21,6 +21,7 @@ export function UserActions({ user }: UserActionsProps) {
                 toast.success(`Role updated to ${role}`);
             } catch (error) {
                 toast.error("Failed to update role");
+                console.error("Error updating role:", error);
             }
         }
     };
@@ -31,6 +32,7 @@ export function UserActions({ user }: UserActionsProps) {
             toast.success("User suspended successfully");
         } catch (error) {
             toast.error("Failed to suspend user");
+            console.error("Error suspending user:", error);
         }
     };
 
@@ -40,6 +42,7 @@ export function UserActions({ user }: UserActionsProps) {
             toast.success("User unsuspended successfully");
         } catch (error) {
             toast.error("Failed to unsuspend user");
+            console.error("Error unsuspending user:", error);
         }
     };
 

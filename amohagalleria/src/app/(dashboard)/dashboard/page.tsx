@@ -30,7 +30,6 @@ export default function DashboardPage() {
         loading: profileLoading,
         fetchProfile,
         isAdmin,
-        isArtist
     } = useProfileStore();
 
     useEffect(() => {

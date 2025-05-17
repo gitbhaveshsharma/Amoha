@@ -57,6 +57,7 @@ export function AddUserDialog({ children }: AddUserDialogProps) {
             setOpen(false);
         } catch (error) {
             // Error is handled in the store
+            console.error("Error creating user:", error);
         }
     };
 

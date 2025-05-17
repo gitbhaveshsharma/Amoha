@@ -111,19 +111,19 @@ export const useUserManagementStore = create<UserManagementState>((set, get) => 
         }
     },
 
-    createUser: async (email, role, name) => {
-        set({ loading: true, error: null });
-        try {
-            // await UserManagementService.createUser(email, role, name);
-            // Refresh the user list after creation
-            const users = await UserManagementService.fetchAllUsers();
-            set({ users, loading: false });
-        } catch (error) {
-            set({
-                error: error instanceof Error ? error.message : "Failed to create user",
-                loading: false,
-            });
-        }
+    createUser: async () => {
+        // set({ loading: true, error: null });
+        // try {
+        //     // await UserManagementService.createUser(email, role, name);
+        //     // Refresh the user list after creation
+        //     const users = await UserManagementService.fetchAllUsers();
+        //     set({ users, loading: false });
+        // } catch (error) {
+        //     set({
+        //         error: error instanceof Error ? error.message : "Failed to create user",
+        //         loading: false,
+        //     });
+        // }
     },
 
     clearError: () => set({ error: null }),
@@ -133,6 +133,3 @@ export const useUserManagementStore = create<UserManagementState>((set, get) => 
     resetFilters: () => set({ filters: {} }),
 }));
 
-function get() {
-    throw new Error("Function not implemented.");
-}
