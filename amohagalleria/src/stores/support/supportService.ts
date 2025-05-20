@@ -1,6 +1,6 @@
 // store/support/supportService.ts
 import { supabase } from '@/lib/supabase';
-import { Ticket, Comment } from '@/types';
+import { Ticket, Comment } from '@/types/support';
 
 export async function fetchTickets(userId: string): Promise<Ticket[]> {
     const { data, error } = await supabase

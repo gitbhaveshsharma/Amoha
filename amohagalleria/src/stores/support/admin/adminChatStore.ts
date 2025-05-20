@@ -1,9 +1,28 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-toastify';
-import { ChatMessage, SupportChatState, Attachment } from '@/types/support';
+import { ChatMessage } from '@/types/support';
 
-export const useSupportChatStore = create<SupportChatState>((set) => ({
+interface AdminChatState {
+    messages: ChatMessage[];
+    isLoading: boolean;
+    isSubmitting: boolean;
+    error: string | null;
+    currentFile: File | null;
+
+    fetchMessages: (ticketId: string) => Promise<void>;
+    sendMessage: (params: {
+        ticketId: string;
+        userId: string;
+        content: string;
+        file?: File | null;
+        isInternal?: boolean;
+    }) => Promise<void>;
+    setFile: (file: File | null) => void;
+    clearMessages: () => void;
+}
+
+export const useAdminChatStore = create<AdminChatState>((set) => ({
     messages: [],
     isLoading: false,
     isSubmitting: false,
@@ -28,13 +47,19 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
             }
 
             if (data?.messages) {
-                const messagesArray = Array.isArray(data.messages) ? data.messages : [];
-                set({ messages: messagesArray });
+                set({
+                    messages: Array.isArray(data.messages)
+                        ? data.messages
+                        : []
+                });
             } else {
                 set({ messages: [] });
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch messages';
+            console.error('Error fetching messages:', error);
+            const errorMessage = error instanceof Error
+                ? error.message
+                : 'Failed to fetch messages';
             set({ error: errorMessage });
             toast.error('Failed to load messages');
         } finally {
@@ -42,16 +67,23 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
         }
     },
 
-    sendMessage: async ({ ticketId, userId, content, file }) => {
+    sendMessage: async ({ ticketId, userId, content, file, isInternal = false }) => {
         if (!content.trim() || !userId) return;
 
         set({ isSubmitting: true, error: null });
         try {
-            let attachments: Attachment[] = [];
+            const newMessageObj: ChatMessage = {
+                id: crypto.randomUUID(),
+                author_ref: `agent_${userId}`,
+                content: content,
+                is_internal: !!isInternal,
+                created_at: new Date().toISOString(),
+                attachments: []
+            };
 
             if (file) {
                 const fileExt = file.name.split('.').pop();
-                const fileName = `${userId}-${Date.now()}.${fileExt}`;
+                const fileName = `agent_${userId}-${Date.now()}.${fileExt}`;
                 const filePath = `${ticketId}/${fileName}`;
 
                 const { data: uploadData, error: uploadError } = await supabase.storage
@@ -64,23 +96,14 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
                     .from('ticket-attachments')
                     .getPublicUrl(filePath);
 
-                attachments = [{
+                newMessageObj.attachments = [{
                     id: uploadData.path,
                     url: publicUrl,
                     name: file.name,
                     type: file.type,
-                    size: file.size,
+                    size: file.size
                 }];
             }
-
-            const newMessageObj: ChatMessage = {
-                id: crypto.randomUUID(),
-                author_ref: `user_${userId}`,
-                content: content,
-                created_at: new Date().toISOString(),
-                is_internal: false,
-                attachments: attachments.length > 0 ? attachments : []
-            };
 
             const { error } = await supabase.rpc('append_ticket_message', {
                 p_ticket_id: ticketId,
@@ -90,14 +113,29 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
 
             if (error) throw error;
 
-            set(state => ({
-                messages: Array.isArray(state.messages) ? [...state.messages, newMessageObj] : [newMessageObj],
+            const { error: ticketError } = await supabase
+                .from('support_tickets')
+                .update({
+                    status: 'in_progress',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', ticketId);
+
+            if (ticketError) throw ticketError;
+
+            set((state) => ({
+                messages: Array.isArray(state.messages)
+                    ? [...state.messages, newMessageObj]
+                    : [newMessageObj],
                 currentFile: null
             }));
 
             toast.success('Message sent successfully');
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
+            console.error('Error sending message:', error);
+            const errorMessage = error instanceof Error
+                ? error.message
+                : 'Failed to send message';
             set({ error: errorMessage });
             toast.error('Failed to send message');
         } finally {
@@ -105,6 +143,11 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
         }
     },
 
-    setFile: (file) => set({ currentFile: file }),
-    clearMessages: () => set({ messages: [] }),
+    setFile: (file) => {
+        set({ currentFile: file });
+    },
+
+    clearMessages: () => {
+        set({ messages: [] });
+    }
 }));

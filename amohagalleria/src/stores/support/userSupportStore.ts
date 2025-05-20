@@ -1,16 +1,7 @@
 // store/support/userSupportStore.ts
 import { create } from 'zustand';
 import { fetchTickets, createTicket, addComment } from './supportService';
-import { Ticket, Comment } from '@/types';
-
-interface SupportState {
-    tickets: Ticket[];
-    loading: boolean;
-    error: string | null;
-    fetchUserTickets: (userId: string) => Promise<void>;
-    createNewTicket: (ticketData: Omit<Ticket, 'id' | 'created_at' | 'updated_at'>) => Promise<Ticket>;
-    addTicketComment: (commentData: Omit<Comment, 'id' | 'created_at'>) => Promise<void>;
-}
+import { SupportState } from '@/types/support';
 
 export const useSupportStore = create<SupportState>((set) => ({
     tickets: [],

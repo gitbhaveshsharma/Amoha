@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useSupportStore } from '@/stores/support/userSupportStore';
 import { useEffect, useState } from 'react';
-import { Ticket } from '@/types';
+import { Ticket, Comment } from '@/types/support';
 import { TicketDetailsModal } from './TicketDetailsModal';
 import { SupportChatModal } from './SupportChatModal';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/Button';
 import { format } from 'date-fns';
 import { useSession } from '@/hooks/useSession';
 import { supabase } from '@/lib/supabase';
-import { Comment } from '@/types';
 import { MessageSquare, ChevronRight, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';

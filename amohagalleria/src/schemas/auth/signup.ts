@@ -133,9 +133,7 @@ export const signupFormSchema = z.object({
     preferredLanguages: sqlSafeArray("Preferred languages", 5).optional(),
     accessibilityNeeds: sqlSafeArray("Accessibility needs", 10).optional(),
     culturalIdentity: sqlSafeArray("Cultural identity", 5).optional(),
-    termsAccepted: z.literal(true, {
-        errorMap: () => ({ message: "You must accept the terms and conditions" })
-    }),
+    termsAccepted: z.boolean().optional().default(true)
 
 });
 

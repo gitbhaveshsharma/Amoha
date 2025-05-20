@@ -9,7 +9,7 @@ export function SettingsTabs() {
         <Tabs defaultValue="artwork" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="artwork">Artwork </TabsTrigger>
-                <TabsTrigger value="payout">Currency </TabsTrigger>
+                <TabsTrigger value="payout">Payout </TabsTrigger>
             </TabsList>
             <TabsContent value="artwork">
                 <ArtCategoryTable />
