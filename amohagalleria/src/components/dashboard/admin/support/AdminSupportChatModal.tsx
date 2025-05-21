@@ -3,12 +3,14 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
 import { useSession } from '@/hooks/useSession';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { Paperclip, SendHorizontal, X, User, Download, FileIcon } from 'lucide-react';
 import { useAdminChatStore } from '@/stores/support/admin/adminChatStore';
 import { Ticket, ChatMessage as Message, ChatAttachment } from '@/types/support';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface AdminTicketChatModalProps {
     ticket: Ticket;
@@ -72,7 +74,9 @@ export function AdminTicketChatModal({
 
     const getMessageKey = (message: Message, index: number) => {
         return `message-${message.id}-${index}`;
-    }; const getAttachmentKey = (attachment: ChatAttachment, index: number) => {
+    };
+
+    const getAttachmentKey = (attachment: ChatAttachment, index: number) => {
         return `attachment-${attachment.id}-${index}`;
     };
 
@@ -113,6 +117,23 @@ export function AdminTicketChatModal({
             handleSendMessage();
         }
     };
+
+    const MessageSkeleton = ({ isAgent = false }) => (
+        <div className={`flex ${isAgent ? 'justify-end' : 'justify-start'} mb-4`}>
+            <div className={`max-w-xs md:max-w-md rounded-xl p-3 ${isAgent
+                ? 'bg-gray-100 dark:bg-gray-700 rounded-br-none'
+                : 'bg-gray-100 dark:bg-gray-700 rounded-bl-none'
+                }`}>
+                <div className="flex items-center space-x-2 mb-2">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-3/4 mb-1" />
+                <Skeleton className="h-4 w-5/6" />
+            </div>
+        </div>
+    );
 
     if (!isOpen) return null;
 
@@ -157,10 +178,11 @@ export function AdminTicketChatModal({
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {isLoading ? (
-                        <div className="flex justify-center items-center h-full">
-                            <div className="animate-pulse text-gray-500 dark:text-gray-400">
-                                Loading messages...
-                            </div>
+                        <div className="space-y-4">
+                            <MessageSkeleton isAgent={false} />
+                            <MessageSkeleton isAgent={true} />
+                            <MessageSkeleton isAgent={false} />
+                            <MessageSkeleton isAgent={true} />
                         </div>
                     ) : messages.length === 0 ? (
                         <div className="flex flex-col justify-center items-center h-full text-center p-8">
@@ -212,16 +234,23 @@ export function AdminTicketChatModal({
                                                 {isAgent ? 'Support Agent' : 'Customer'} • {format(new Date(message.created_at), 'MMM dd, HH:mm')}
                                             </span>
                                         </div>
-                                        <p className="text-sm">{message.content}</p>                                        {message.attachments && message.attachments.length > 0 && (
+                                        <p className="text-sm">{message.content}</p>
+
+                                        {message.attachments && message.attachments.length > 0 && (
                                             <div className="mt-2">
                                                 {message.attachments.map((attachment, attachmentIndex) => (
                                                     <div key={getAttachmentKey(attachment, attachmentIndex)}>
                                                         {isImageAttachment(attachment) ? (
                                                             <div className="mt-2">
-                                                                <img
+
+                                                                <Image
                                                                     src={attachment.url}
                                                                     alt={attachment.name}
+                                                                    width={320}
+                                                                    height={192}
                                                                     className="rounded-md max-h-48 object-contain"
+                                                                    style={{ width: 'auto', height: 'auto', maxHeight: '12rem' }}
+                                                                    unoptimized
                                                                 />
                                                                 <a
                                                                     href={attachment.url}
@@ -269,22 +298,6 @@ export function AdminTicketChatModal({
                 </div>
 
                 <div className="border-t dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-b-xl">
-                    {/* <div className="flex items-center space-x-2 mb-2">
-                        <Button
-                            size="sm"
-                            variant={isInternalMessage ? "default" : "outline"}
-                            onClick={() => setIsInternalMessage(!isInternalMessage)}
-                            className={isInternalMessage ? "bg-amber-500 hover:bg-amber-600" : ""}
-                        >
-                            {isInternalMessage ? "Internal Note" : "Public Reply"}
-                        </Button>
-                        {isInternalMessage && (
-                            <span className="text-xs text-gray-500">
-                                This message will only be visible to support staff
-                            </span>
-                        )}
-                    </div> */}
-
                     <div className="flex items-center space-x-2">
                         <label className="cursor-pointer p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                             <Paperclip className="h-5 w-5 text-gray-500 dark:text-gray-400" />

@@ -1,6 +1,6 @@
 // services/support/adminSupportService.ts
 import { supabase } from '@/lib/supabase';
-import { Ticket, User, TicketPriority, TicketCategory } from '@/types/support';
+import { Ticket, User, TicketPriority, TicketCategory, TicketFilters } from '@/types/support';
 
 // Utility function to transform raw ticket data
 function transformTicketData(ticket: any): Ticket {
@@ -85,6 +85,45 @@ export async function updateTicketStatus(ticketId: string, status: string): Prom
     }
 }
 
+// Fetch tickets with filters and pagination
+export async function fetchFilteredTickets(filters: TicketFilters): Promise<{ data: Ticket[], count: number }> {
+    let query = supabase
+        .from('support_tickets')
+        .select(`
+            *,
+            profile:user_id (*),
+            priority:priority_id (*),
+            category:category_id (*),
+            attachments:ticket_attachments (*)
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+    // Apply filters
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.priority) query = query.eq('priority_id', filters.priority);
+    if (filters.category) query = query.eq('category_id', filters.category);
+    if (filters.assignee) query = query.eq('assignee_id', filters.assignee);
+    if (filters.search) {
+        query = query.or(`subject.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    }
+    if (filters.startDate) query = query.gte('created_at', filters.startDate);
+    if (filters.endDate) query = query.lte('created_at', filters.endDate);
+
+    // Add pagination
+    if (filters.page && filters.limit) {
+        const offset = (filters.page - 1) * filters.limit;
+        query = query.range(offset, offset + filters.limit - 1);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) throw error;
+
+    return {
+        data: data.map(transformTicketData),
+        count: count || 0
+    };
+}
 // Assign a ticket to a support agent and return the updated ticket
 export async function assignTicket(ticketId: string, assigneeId: string): Promise<Ticket | null> {
     try {

@@ -236,6 +236,23 @@ export interface AdminChatState {
     clearMessages: () => void;
 }
 
+
+/**
+ * Type for ticket filters
+ */
+export type TicketFilters = {
+    status?: 'open' | 'in_progress' | 'resolved' | 'closed' | '';
+    priority?: string;
+    category?: string;
+    assignee?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    // For pagination
+    page?: number;
+    limit?: number;
+};
+
 /**
  * Type for creating a new ticket
  */
