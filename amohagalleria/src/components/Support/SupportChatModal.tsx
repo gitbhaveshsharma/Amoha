@@ -5,29 +5,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useSession } from '@/hooks/useSession';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
-import { Paperclip, SendHorizonal, X } from 'lucide-react';
+import { Paperclip, SendHorizonal, X, Download, FileIcon } from 'lucide-react';
 import { useSupportChatStore } from '@/stores/support/chatStore';
-
-interface Message {
-    id: string;
-    author_ref: string;
-    content: string;
-    created_at: string;
-    attachments?: Attachment[];
-}
-
-interface Attachment {
-    id: string;
-    name: string;
-    url: string;
-}
-
-interface SupportChatModalProps {
-    ticketId: string;
-    isOpen: boolean;
-    onClose: () => void;
-    ticketSubject: string;
-}
+import { ChatMessage as Message, ChatAttachment, SupportChatModalProps } from '@/types/support';
 
 export function SupportChatModal({
     ticketId,
@@ -114,6 +94,16 @@ export function SupportChatModal({
         }
     };
 
+    const getMessageKey = (message: Message, index: number) => {
+        return `message-${message.id}-${index}`;
+    }; const getAttachmentKey = (attachment: ChatAttachment, index: number) => {
+        return `attachment-${attachment.id}-${index}`;
+    };
+
+    const isImageAttachment = (attachment: ChatAttachment): boolean => {
+        return attachment.type.startsWith('image/');
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -158,9 +148,9 @@ export function SupportChatModal({
                             </p>
                         </div>
                     ) : (
-                        messages.map((message: Message) => (
+                        (Array.isArray(messages) ? messages : []).map((message: Message, messageIndex: number) => (
                             <div
-                                key={message.id}
+                                key={getMessageKey(message, messageIndex)}
                                 className={`flex ${message.author_ref === `user_${session?.user?.id}` ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div
@@ -178,20 +168,42 @@ export function SupportChatModal({
                                             {format(new Date(message.created_at), 'MMM dd, HH:mm')}
                                         </span>
                                     </div>
-                                    <p className="text-sm">{message.content}</p>
-                                    {message.attachments?.map((attachment: Attachment) => (
-                                        <div key={attachment.id} className="mt-2">
-                                            <a
-                                                href={attachment.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={`text-sm flex items-center ${message.author_ref === `user_${session?.user?.id}`
-                                                    ? 'text-primary-foreground/80 hover:text-primary-foreground'
-                                                    : 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300'}`}
-                                            >
-                                                <Paperclip className="h-3 w-3 mr-1" />
-                                                {attachment.name}
-                                            </a>
+                                    <p className="text-sm">{message.content}</p>                                    {message.attachments?.map((attachment: ChatAttachment, attachmentIndex: number) => (
+                                        <div key={getAttachmentKey(attachment, attachmentIndex)} className="mt-2">
+                                            {isImageAttachment(attachment) ? (
+                                                <div className="mt-2">
+                                                    <img
+                                                        src={attachment.url}
+                                                        alt={attachment.name}
+                                                        className="rounded-md max-h-48 object-contain"
+                                                    />
+                                                    <a
+                                                        href={attachment.url}
+                                                        download={attachment.name}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className={`text-xs flex items-center mt-1 ${message.author_ref === `user_${session?.user?.id}`
+                                                            ? 'text-primary-foreground/80 hover:text-primary-foreground'
+                                                            : 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300'}`}
+                                                    >
+                                                        <Download className="h-3 w-3 mr-1" />
+                                                        Download
+                                                    </a>
+                                                </div>
+                                            ) : (
+                                                <a
+                                                    href={attachment.url}
+                                                    download={attachment.name}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={`text-sm flex items-center ${message.author_ref === `user_${session?.user?.id}`
+                                                        ? 'text-primary-foreground/80 hover:text-primary-foreground'
+                                                        : 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300'}`}
+                                                >
+                                                    <FileIcon className="h-3 w-3 mr-1" />
+                                                    {attachment.name}
+                                                </a>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

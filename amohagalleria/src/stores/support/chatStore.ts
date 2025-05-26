@@ -1,7 +1,7 @@
-// store/support/chatStore.ts
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
-import { ChatMessage, SupportChatState } from '@/types';
+import { toast } from 'react-toastify';
+import { ChatMessage, SupportChatState, Attachment } from '@/types/support';
 
 export const useSupportChatStore = create<SupportChatState>((set) => ({
     messages: [],
@@ -13,18 +13,30 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
     fetchMessages: async (ticketId) => {
         set({ isLoading: true, error: null });
         try {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('ticket_threads')
                 .select('messages')
                 .eq('ticket_id', ticketId)
                 .single();
 
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    set({ messages: [] });
+                    return;
+                }
+                throw error;
+            }
+
             if (data?.messages) {
-                set({ messages: data.messages });
+                const messagesArray = Array.isArray(data.messages) ? data.messages : [];
+                set({ messages: messagesArray });
+            } else {
+                set({ messages: [] });
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to fetch messages';
             set({ error: errorMessage });
+            toast.error('Failed to load messages');
         } finally {
             set({ isLoading: false });
         }
@@ -35,13 +47,12 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
 
         set({ isSubmitting: true, error: null });
         try {
-            let attachmentData = null;
+            let attachments: Attachment[] = [];
 
-            // Upload file if exists
             if (file) {
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${userId}-${Date.now()}.${fileExt}`;
-                const filePath = `ticket-attachments/${ticketId}/${fileName}`;
+                const filePath = `${ticketId}/${fileName}`;
 
                 const { data: uploadData, error: uploadError } = await supabase.storage
                     .from('ticket-attachments')
@@ -49,26 +60,28 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
 
                 if (uploadError) throw uploadError;
 
-                attachmentData = [{
+                const { data: { publicUrl } } = supabase.storage
+                    .from('ticket-attachments')
+                    .getPublicUrl(filePath);
+
+                attachments = [{
                     id: uploadData.path,
-                    url: supabase.storage.from('ticket-attachments').getPublicUrl(filePath).data.publicUrl,
+                    url: publicUrl,
                     name: file.name,
                     type: file.type,
                     size: file.size,
                 }];
             }
 
-            // Create new message object
             const newMessageObj: ChatMessage = {
                 id: crypto.randomUUID(),
                 author_ref: `user_${userId}`,
-                content,
+                content: content,
                 created_at: new Date().toISOString(),
                 is_internal: false,
-                ...(attachmentData && { attachments: attachmentData }),
+                attachments: attachments.length > 0 ? attachments : []
             };
 
-            // Update the thread
             const { error } = await supabase.rpc('append_ticket_message', {
                 p_ticket_id: ticketId,
                 new_message: newMessageObj,
@@ -77,16 +90,21 @@ export const useSupportChatStore = create<SupportChatState>((set) => ({
 
             if (error) throw error;
 
-            set({ currentFile: null });
+            set(state => ({
+                messages: Array.isArray(state.messages) ? [...state.messages, newMessageObj] : [newMessageObj],
+                currentFile: null
+            }));
+
+            toast.success('Message sent successfully');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
             set({ error: errorMessage });
+            toast.error('Failed to send message');
         } finally {
             set({ isSubmitting: false });
         }
     },
 
     setFile: (file) => set({ currentFile: file }),
-
     clearMessages: () => set({ messages: [] }),
 }));

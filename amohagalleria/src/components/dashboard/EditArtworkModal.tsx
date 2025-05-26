@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { ImageIcon, X, Loader2 } from "lucide-react";
@@ -58,6 +58,13 @@ export const EditArtworkModal = ({
         },
     }) as unknown as ReturnType<typeof useForm<ArtworkFormValues>>;
 
+    const handleClose = useCallback(() => {
+        setPreviewUrl(artwork.image_url || null);
+        setNewImageFile(null);
+        form.reset();
+        onClose();
+    }, [artwork.image_url, form, onClose]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
@@ -66,7 +73,7 @@ export const EditArtworkModal = ({
         };
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
-    }, []);
+    }, [handleClose]);
 
     useEffect(() => {
         if (currencies.length === 0) {
@@ -75,24 +82,35 @@ export const EditArtworkModal = ({
     }, [currencies.length, fetchCurrencies]);
 
     useEffect(() => {
-        if (isOpen) {
-            // Reset form state with the new artwork data when modal opens
-            form.reset({
-                title: artwork.title,
-                art_category: artwork.art_category,
-                art_location: artwork.art_location,
-                artist_price: artwork.artist_price?.toString() || "",
-                description: artwork.description,
-                medium: artwork.medium,
-                dimensions: artwork.dimensions,
-                date: artwork.date ? new Date(artwork.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                currency: artwork.currency || "USD",
-                image: undefined as unknown as FileList,
-            });
-            setPreviewUrl(artwork.image_url || null);
-            setNewImageFile(null);
+        if (isOpen && artwork) {
+            // First reset the form to clear any previous state
+            form.reset();
+
+            // Then set the new values after a small delay to ensure clean state
+            const timer = setTimeout(() => {
+                form.reset({
+                    title: artwork.title,
+                    art_category: artwork.art_category,
+                    art_location: artwork.art_location,
+                    artist_price: artwork.artist_price?.toString() || "",
+                    description: artwork.description,
+                    medium: artwork.medium,
+                    dimensions: artwork.dimensions,
+                    date: artwork.date ? new Date(artwork.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                    currency: artwork.currency || "USD",
+                    image: undefined as unknown as FileList,
+                });
+            }, 50);
+
+            return () => clearTimeout(timer);
         }
-    }, [artwork, isOpen]); // Trigger when artwork or modal state changes
+    }, [artwork, isOpen, form]);
+    // Debug useEffect
+    useEffect(() => {
+        console.log("Current artwork category:", artwork?.art_category);
+        console.log("Form art_category value:", form.watch("art_category"));
+        console.log("Is form dirty?", form.formState.isDirty);
+    }, [artwork, form]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -103,13 +121,6 @@ export const EditArtworkModal = ({
             form.setValue("image", files, { shouldValidate: true });
             form.clearErrors("image");
         }
-    };
-
-    const handleClose = () => {
-        setPreviewUrl(artwork.image_url || null);
-        setNewImageFile(null);
-        form.reset();
-        onClose();
     };
 
     const onSubmit = async (values: ArtworkFormValues) => {
@@ -280,6 +291,7 @@ export const EditArtworkModal = ({
                                                         <FormLabel>Category*</FormLabel>
                                                         <FormControl>
                                                             <ArtCategorySelect
+                                                                key={`category-select-${artwork.id}`}
                                                                 field={field}
                                                             />
                                                         </FormControl>
@@ -375,12 +387,8 @@ export const EditArtworkModal = ({
                                                         <FormLabel>Currency*</FormLabel>
                                                         <FormControl>
                                                             <CurrencySelect
-                                                                name="currency"
-                                                                value={field.value}
-                                                                onChange={(value: CurrencyCode) => {
-                                                                    field.onChange(value);
-                                                                    form.trigger("currency");
-                                                                }}
+                                                                field={field}
+                                                                artworkId={artwork.id}
                                                             />
                                                         </FormControl>
                                                         <FormMessage />

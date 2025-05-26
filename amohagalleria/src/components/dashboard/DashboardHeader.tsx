@@ -1,25 +1,14 @@
 "use client";
 import { Button } from "@/components/ui/Button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Menu, ChevronDown, Home, ShoppingCart, Heart } from "lucide-react";
+import { LogOut, User, Menu, ChevronDown, Home, ShoppingCart, Heart, Settings, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { NotificationBell } from "../notifications/NotificationBell";
 import { cn } from "@/lib/utils";
-
-type DashboardSection =
-    | "dashboard"
-    | "wishlist"
-    | "bids"
-    | "support"
-    | "profile"
-    | "upload"
-    | "artworks"
-    | "payouts"
-    | "cart"
-    | "sale";
+import { DashboardSection } from "@/types/dashboard";
 
 interface DashboardHeaderProps {
     title: string;
@@ -27,7 +16,9 @@ interface DashboardHeaderProps {
     profile: {
         name: string;
         avatar_url?: string;
+        role?: string;
     };
+
     onMenuToggle: () => void;
     onProfileClick: () => void;
     onCartClick?: () => void;
@@ -37,7 +28,9 @@ interface DashboardHeaderProps {
     cartCount?: number;
     wishlistCount?: number;
     notificationsLoading?: boolean;
-    activeSection?: DashboardSection;
+    activeSection: DashboardSection;
+    isAdmin?: boolean;
+    isArtist?: boolean;
 }
 
 export function DashboardHeader({
@@ -53,6 +46,8 @@ export function DashboardHeader({
     cartCount = 0,
     notificationsLoading = false,
     activeSection,
+    isAdmin = false,
+    isArtist = false,
 }: DashboardHeaderProps) {
     return (
         <div className="sticky top-0 z-50 bg-white border-b border-gray-200 p-4 shadow-sm dark:bg-gray-900 dark:border-gray-800">
@@ -105,8 +100,8 @@ export function DashboardHeader({
                         </Link>
                     )}
 
-                    {/* Wishlist Button */}
-                    {loading ? (
+                    {/* Wishlist Button - Hidden for admin */}
+                    {!isAdmin && (loading ? (
                         <Skeleton className="h-10 w-10 rounded-full dark:bg-gray-800" />
                     ) : (
                         <Button
@@ -120,14 +115,12 @@ export function DashboardHeader({
                             onClick={onWishlistClick}
                         >
                             <Heart className="h-5 w-5" />
-
                             <span className="hidden md:inline ml-2">Wishlist</span>
-
                         </Button>
-                    )}
+                    ))}
 
-                    {/* Cart Button */}
-                    {loading ? (
+                    {/* Cart Button - Hidden for admin */}
+                    {!isAdmin && (loading ? (
                         <Skeleton className="h-10 w-10 rounded-full dark:bg-gray-800" />
                     ) : (
                         <Button
@@ -147,9 +140,8 @@ export function DashboardHeader({
                                 </Badge>
                             )}
                             <span className="hidden md:inline ml-2">Cart</span>
-
                         </Button>
-                    )}
+                    ))}
 
                     {/* Notification Button */}
                     {loading || notificationsLoading ? (
@@ -159,7 +151,6 @@ export function DashboardHeader({
                     )}
 
                     {/* Profile Dropdown */}
-                    {/* Profile Dropdown */}
                     {loading ? (
                         <div className="flex items-center gap-2">
                             <Skeleton className="h-10 w-10 rounded-full" />
@@ -168,10 +159,22 @@ export function DashboardHeader({
                     ) : (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="flex items-center rounded-full  hover:bg-[#a35339]/10 hover:text-[#a35339] text-gray-600 dark:hover:bg-[#a35339]/20" style={{ paddingInline: "inherit" }}>
+                                <Button
+                                    variant="outline"
+                                    className={cn(
+                                        "flex items-center rounded-full hover:bg-[#a35339]/10 hover:text-[#a35339] text-gray-600 dark:hover:bg-[#a35339]/20",
+                                        isAdmin ? "border-blue-500" : isArtist ? "border-purple-500" : ""
+                                    )}
+                                    style={{ paddingInline: "inherit" }}
+                                >
                                     <Avatar>
                                         <AvatarImage src={profile?.avatar_url ?? ""} />
-                                        <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                                        <AvatarFallback className={cn(
+                                            "text-white",
+                                            isAdmin ? "bg-gradient-to-r from-blue-500 to-blue-700" :
+                                                isArtist ? "bg-gradient-to-r from-purple-500 to-pink-500" :
+                                                    "bg-gradient-to-r from-gray-500 to-gray-700"
+                                        )}>
                                             {profile?.name?.charAt(0).toUpperCase() ?? ""}
                                         </AvatarFallback>
                                     </Avatar>
@@ -181,18 +184,39 @@ export function DashboardHeader({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                                 align="end"
-                                className="w-56 rounded-lg shadow-lg border border-gray-200"
+                                className="w-56 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
                             >
                                 <DropdownMenuItem
                                     onClick={onProfileClick}
-                                    className="cursor-pointer hover:bg-gray-50 rounded-md"
+                                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
                                 >
                                     <User className="mr-2 h-4 w-4" />
                                     <span>Profile</span>
                                 </DropdownMenuItem>
+
+                                {isAdmin && (
+                                    <DropdownMenuItem
+                                        onClick={() => window.location.href = '/admin'}
+                                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+                                    >
+                                        <Shield className="mr-2 h-4 w-4 text-blue-500" />
+                                        <span>Admin Panel</span>
+                                    </DropdownMenuItem>
+                                )}
+
+                                {isArtist && (
+                                    <DropdownMenuItem
+                                        onClick={() => window.location.href = '/artist'}
+                                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+                                    >
+                                        <Settings className="mr-2 h-4 w-4 text-purple-500" />
+                                        <span>Artist Settings</span>
+                                    </DropdownMenuItem>
+                                )}
+
                                 <DropdownMenuItem
                                     onClick={onSignOut}
-                                    className="cursor-pointer text-red-600 hover:bg-red-50 rounded-md"
+                                    className="cursor-pointer text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
                                 >
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Sign Out</span>

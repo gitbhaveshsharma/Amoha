@@ -12,34 +12,24 @@ import { ArtworkSection } from "@/components/dashboard/DashboardSections/Artwork
 import { ArtistPayoutSection } from "@/components/dashboard/Payout/Artist/ArtistPayoutSection";
 import { CartSection } from "@/components/dashboard/DashboardSections/CartSection";
 import { SaleSection } from "@/components/dashboard/DashboardSections/SaleSection";
+import { SettingsSection } from "@/components/dashboard/DashboardSections/SettingsSection";
+import { UserManagementSection } from "@/components/dashboard/DashboardSections/UserManagementSection";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { useProfileStore } from "@/stores/profile/profileStore";
 import { Skeleton } from "@/components/ui/skeleton";
-
-
-type DashboardSection =
-    | "dashboard"
-    | "wishlist"
-    | "bids"
-    | "support"
-    | "profile"
-    | "upload"
-    | "artworks"
-    | "payouts"
-    | "cart"
-    | "sale"; // Added "sale" section
+import { DashboardSection } from "@/types/dashboard";
 
 export default function DashboardPage() {
     const [authChecked, setAuthChecked] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [activeSection, setActiveSection] = useState<DashboardSection>("dashboard");
-    const router = useRouter();
+    const [activeSection, setActiveSection] = useState<DashboardSection | undefined>("dashboard"); const router = useRouter();
 
     const {
         profile,
         loading: profileLoading,
         fetchProfile,
+        isAdmin,
     } = useProfileStore();
 
     useEffect(() => {
@@ -53,7 +43,6 @@ export default function DashboardPage() {
 
             setAuthChecked(true);
 
-            // Fetch profile only if not already loaded
             if (!profile) {
                 await fetchProfile(session.user.id);
             }
@@ -115,46 +104,90 @@ export default function DashboardPage() {
                 return <ArtistPayoutSection />;
             case "cart":
                 return <CartSection />;
-            case "sale": // Added case for "sale"
+            case "sales": // Changed from "sale" to "sales"
                 return <SaleSection />;
+            case "settings":
+                return <SettingsSection />;
+            case "user-management":
+                return <UserManagementSection />;
             default:
                 return <DashboardHome userName={profile?.name || ""} userRole={profile?.role || ""} />;
         }
     };
 
     const handleWishlistClick = () => {
-        setActiveSection("wishlist"); // Navigate to wishlist section
+        setActiveSection("wishlist");
     };
 
     const getSectionTitle = () => {
         switch (activeSection) {
-            case "dashboard": return "Dashboard Overview";
-            case "wishlist": return "My Wishlist";
-            case "bids": return "My Bids";
-            case "upload": return "Upload Artwork";
-            case "support": return "Support Center";
-            case "profile": return "My Profile";
-            case "artworks": return "My Artworks";
-            case "payouts": return "Artist Payouts";
-            case "cart": return "My Cart";
-            case "sale": return "My Sales"; // Added title for "sale"
-            default: return "Dashboard";
+            case "dashboard":
+                return isAdmin() ? "Admin Dashboard" : "My Dashboard";
+            case "wishlist":
+                return "My Wishlist";
+            case "bids":
+                return isAdmin() ? "All Bids" : "My Bids";
+            case "upload":
+                return "Upload Artwork";
+            case "support":
+                return "Support Center";
+            case "profile":
+                return "My Profile";
+            case "artworks":
+                return isAdmin() ? "Artwork Management" : "My Artworks";
+            case "payouts":
+                return isAdmin() ? "Payouts" : "My Payouts";
+            case "cart":
+                return "My Cart";
+            case "sales": // Changed from "sale" to "sales"
+                return isAdmin() ? "Sales Management" : "My Sales";
+            case "settings":
+                return "Settings";
+            case "user-management":
+                return "User Management";
+            default:
+                return "Dashboard";
         }
     };
 
     const getSectionDescription = () => {
         switch (activeSection) {
-            case "dashboard": return "Welcome back! Here is your activity overview";
-            case "wishlist": return "Manage your saved items";
-            case "bids": return "Track your active and past bids";
-            case "upload": return "Upload your artwork and details";
-            case "support": return "Get help with your account";
-            case "profile": return "View and edit your profile";
-            case "artworks": return "View and manage your artworks";
-            case "payouts": return "Manage your earnings and payment methods";
-            case "cart": return "Review and manage items in your cart";
-            case "sale": return "Track and manage your sales"; // Added description for "sale"
-            default: return "";
+            case "dashboard":
+                return isAdmin()
+                    ? "Admin overview of platform activity"
+                    : "Welcome back! Here is your activity overview";
+            case "wishlist":
+                return "Manage your saved items";
+            case "bids":
+                return isAdmin()
+                    ? "View and manage all bids on the platform"
+                    : "Track your active and past bids";
+            case "upload":
+                return "Upload your artwork and details";
+            case "support":
+                return "Get help with your account";
+            case "profile":
+                return "View and edit your profile";
+            case "artworks":
+                return isAdmin()
+                    ? "Manage all artworks on the platform"
+                    : "View and manage your artworks";
+            case "payouts":
+                return isAdmin()
+                    ? "View and manage payouts "
+                    : "Manage your earnings and payment methods";
+            case "cart":
+                return "Review and manage items in your cart";
+            case "sales": // Changed from "sale" to "sales"
+                return isAdmin()
+                    ? "View and manage all sales on the platform"
+                    : "Track and manage your sales";
+            case "settings":
+                return "Manage your account settings and preferences";
+            case "user-management":
+                return "Manage user accounts and permissions";
+            default:
+                return "";
         }
     };
 
@@ -163,13 +196,14 @@ export default function DashboardPage() {
             <Sidebar
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
-                activeSection={activeSection}
+                activeSection={activeSection || "dashboard"}
                 setActiveSection={setActiveSection}
                 isLoading={!authChecked || profileLoading}
+                isAdmin={isAdmin()}
+
             />
 
             <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-                {/* Header with no padding container */}
                 <DashboardHeader
                     title={getSectionTitle()}
                     description={getSectionDescription()}
@@ -181,10 +215,11 @@ export default function DashboardPage() {
                     onCartClick={() => setActiveSection("cart")}
                     onWishlistClick={handleWishlistClick}
                     wishlistCount={5}
-                    activeSection={activeSection}
+
+                    activeSection={activeSection || "dashboard"}
+                    isAdmin={isAdmin()}
                 />
 
-                {/* Main content - padding can be handled by individual sections */}
                 <main className={`flex-1 overflow-auto p-4 md:p-6 ${sidebarOpen ? 'lg:opacity-100 opacity-70' : 'opacity-100'}`}>
                     {renderSection()}
                 </main>

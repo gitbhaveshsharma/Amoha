@@ -1,11 +1,13 @@
 "use client"
 
+import { useEffect } from "react"
 import { ArrowRight, User, Lock } from "lucide-react"
 import { UseFormReturn } from "react-hook-form"
 import { Button } from "@/components/ui/Button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import type { SignupFormValues } from "@/schemas/auth/signup"
@@ -29,6 +31,11 @@ export default function SignupCard({
     const { control, formState, watch } = signupForm
     const emailValue = watch("email")
 
+    useEffect(() => {
+        console.log("Form errors:", signupForm.formState.errors);
+        console.log("Is form valid?", signupForm.formState.isValid);
+        console.log("Current values:", signupForm.getValues());
+    }, [signupForm.formState]);
     return (
         <Card className="w-full shadow-lg">
             <CardHeader className="space-y-1">
@@ -129,7 +136,25 @@ export default function SignupCard({
                                 </FormItem>
                             )}
                         />
-
+                        <FormField
+                            control={control}
+                            name="termsAccepted"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                        <FormLabel>
+                                            I accept the terms and conditions
+                                        </FormLabel>
+                                    </div>
+                                </FormItem>
+                            )}
+                        />
                         <Button
                             type="submit"
                             className="w-full"

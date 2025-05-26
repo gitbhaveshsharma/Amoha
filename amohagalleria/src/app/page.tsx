@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from '@/components/layout/Navbar';
-import HeroImage from '@/components/sections/HeroSection';
+// import HeroImage from '@/components/sections/HeroSection';
+import HomePage from '@/components/home/pages';
 
 
 export default function Home() {
@@ -8,7 +9,8 @@ export default function Home() {
     <div>
       <Navbar />
       <main>
-        <HeroImage />
+        {/* <HeroImage /> */}
+        <HomePage />
       </main>
     </div>
   );

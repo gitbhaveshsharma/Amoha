@@ -72,7 +72,7 @@ export function BidsSection() {
 
         fetchAllData();
         return () => clearArtworks();
-    }, [session?.user?.id, fetchBids, fetchArtworksForBids, clearArtworks]);
+    }, [session?.user?.id, fetchBids, fetchArtworksForBids, clearArtworks, bids.length]);
 
     // Filter and sort bids
     const filteredBids = useMemo(() => {

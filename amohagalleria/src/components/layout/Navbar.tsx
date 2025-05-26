@@ -10,6 +10,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useUploadStore } from "@/stores/upload/uploadStore";
 import { UploadModal } from "@/components/UploadModal";
 import { useSession } from "@/hooks/useSession";
+import Image from "next/image";
 
 const Navbar: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,10 +43,12 @@ const Navbar: React.FC = () => {
                     <Link href="/dashboard" passHref>
                         <Button variant="default" title="Profile">
                             {session.user.user_metadata.avatar_url ? (
-                                <img
+                                <Image
                                     src={session.user.user_metadata.avatar_url}
                                     alt="Profile"
                                     className="h-6 w-6 rounded-full mr-2 object-cover"
+                                    width={24}
+                                    height={24}
                                 />
                             ) : (
                                 <User size={16} className="mr-2" />
@@ -74,10 +77,12 @@ const Navbar: React.FC = () => {
 
             <div className="flex items-center justify-between px-4 py-2">
                 <Link href="/" passHref>
-                    <img
+                    <Image
                         src="/logo/amohagalleria-logo.webp"
                         alt="AMOHA Logo"
                         className="h-12 w-auto cursor-pointer md:hidden"
+                        width={120}
+                        height={48}
                     />
                 </Link>
 
@@ -138,10 +143,12 @@ const Navbar: React.FC = () => {
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center justify-between px-4 py-3">
                 <Link href="/" passHref>
-                    <img
+                    <Image
                         src="/logo/amohagalleria-logo.webp"
                         alt="AMOHA Logo"
                         className="h-12 w-auto cursor-pointer"
+                        width={120}
+                        height={48}
                     />
                 </Link>
 

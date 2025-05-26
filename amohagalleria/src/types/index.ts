@@ -17,6 +17,7 @@ export interface Artwork {
     is_original: boolean;
     edition_number: string | null;
     currency: string;
+    is_featured: boolean;
 }
 
 

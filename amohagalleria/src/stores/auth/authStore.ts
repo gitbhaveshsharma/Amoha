@@ -8,6 +8,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     error: null,
     sessionChecked: false,
     hasUploadIntent: false,
+    profileExists: null,  // Add this new state to track profile status
 
     // Actions
     setUser: (user) => set({ user }),
@@ -15,6 +16,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     setError: (error) => set({ error }),
     setSessionChecked: (sessionChecked) => set({ sessionChecked }),
     setHasUploadIntent: (hasUploadIntent) => set({ hasUploadIntent }),
+    setProfileExists: (profileExists) => set({ profileExists }), // Add setter for profileExists
     clearError: () => set({ error: null }),
 
     checkSession: async () => {
@@ -22,6 +24,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             get().setIsLoading(true);
             const user = await AuthService.checkSession();
             get().setUser(user);
+
+            // Check if the user has a profile when logged in
+            if (user) {
+                const hasProfile = await AuthService.checkProfileExists(user.id);
+                get().setProfileExists(hasProfile);
+            }
         } catch (error) {
             get().setError(error instanceof Error ? error.message : 'Unknown error');
         } finally {
@@ -49,6 +57,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             get().clearError();
             const user = await AuthService.verifyOtp(email, otp);
             get().setUser(user);
+
+            // Also check profile existence right after verification
+            if (user) {
+                const hasProfile = await AuthService.checkProfileExists(user.id);
+                get().setProfileExists(hasProfile);
+            }
+
+            return user;
         } catch (error) {
             get().setError(error instanceof Error ? error.message : 'Failed to verify OTP');
             throw error;
@@ -64,6 +80,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             const user = get().user;
             if (!user) throw new Error('User not found');
             await AuthService.completeProfileSetup(user.id, values);
+            get().setProfileExists(true); // Update profile status after setup
         } catch (error) {
             get().setError(error instanceof Error ? error.message : 'Failed to setup profile');
             throw error;

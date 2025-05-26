@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 
 export const BankAccountForm = () => {
-    const { control, watch } = useFormContext();
-    const accountNumber = watch("details.account_number");
+    const { control } = useFormContext();
+    // const accountNumber = watch("details.account_number");
 
     return (
         <div className="space-y-4">
@@ -18,9 +18,9 @@ export const BankAccountForm = () => {
                     <FormItem>
                         <Label>Account Holder Name</Label>
                         <FormControl>
-                            <Input 
-                                {...field} 
-                                placeholder="John Doe" 
+                            <Input
+                                {...field}
+                                placeholder="John Doe"
                                 autoComplete="off"
                                 pattern="[a-zA-Z0-9\s\-\.]*"
                             />
@@ -37,9 +37,9 @@ export const BankAccountForm = () => {
                     <FormItem>
                         <Label>Account Number</Label>
                         <FormControl>
-                            <Input 
-                                {...field} 
-                                placeholder="123456789" 
+                            <Input
+                                {...field}
+                                placeholder="123456789"
                                 type="password"
                                 autoComplete="off"
                                 inputMode="numeric"
@@ -58,9 +58,9 @@ export const BankAccountForm = () => {
                     <FormItem>
                         <Label>Confirm Account Number</Label>
                         <FormControl>
-                            <Input 
-                                {...field} 
-                                placeholder="123456789" 
+                            <Input
+                                {...field}
+                                placeholder="123456789"
                                 type="password"
                                 autoComplete="off"
                                 inputMode="numeric"
@@ -79,9 +79,9 @@ export const BankAccountForm = () => {
                     <FormItem>
                         <Label>Routing Number</Label>
                         <FormControl>
-                            <Input 
-                                {...field} 
-                                placeholder="091000019" 
+                            <Input
+                                {...field}
+                                placeholder="091000019"
                                 inputMode="numeric"
                                 pattern="[0-9]*"
                                 maxLength={9}
@@ -99,9 +99,9 @@ export const BankAccountForm = () => {
                     <FormItem>
                         <Label>Bank Name</Label>
                         <FormControl>
-                            <Input 
-                                {...field} 
-                                placeholder="Chase Bank" 
+                            <Input
+                                {...field}
+                                placeholder="Chase Bank"
                                 autoComplete="off"
                                 pattern="[a-zA-Z0-9\s\-\.]*"
                             />

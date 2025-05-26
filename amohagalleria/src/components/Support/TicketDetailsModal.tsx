@@ -1,16 +1,9 @@
 // components/support/TicketDetailsModal.tsx
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Ticket } from '@/types';
+import { TicketDetailsModalProps, } from '@/types/support';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
-
-interface TicketDetailsModalProps {
-    ticketId: string;
-    isOpen: boolean;
-    onClose: () => void;
-    ticket: Ticket;
-}
 
 export function TicketDetailsModal({ ticketId, isOpen, onClose, ticket }: TicketDetailsModalProps) {
     const [attachments, setAttachments] = useState<{ id: string, file_url: string, created_at: string }[]>([]);
@@ -29,7 +22,15 @@ export function TicketDetailsModal({ ticketId, isOpen, onClose, ticket }: Ticket
                     .select('id, file_url, created_at')
                     .eq('ticket_id', ticketId);
 
-                if (attachmentsData) setAttachments(attachmentsData);
+                if (attachmentsData) {
+                    setAttachments(
+                        attachmentsData.map(att => ({
+                            id: String(att.id),
+                            file_url: String(att.file_url),
+                            created_at: String(att.created_at),
+                        }))
+                    );
+                }
             } catch (error) {
                 console.error('Error fetching ticket details:', error);
             } finally {

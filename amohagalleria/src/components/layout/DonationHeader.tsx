@@ -11,7 +11,7 @@ const DonationHeader: React.FC = () => {
                 rel="noopener noreferrer"
             >
                 <Gift className="mr-1" />Project:
-                DAAN invites artwork donations auction proceeds support "Mission Zero Hunger" to fight global hunger.
+                DAAN invites artwork donations auction proceeds support &quot;Mission Zero Hunger&quot; to fight global hunger.
             </Link>
         </div>
     );

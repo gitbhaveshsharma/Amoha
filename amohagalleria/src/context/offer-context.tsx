@@ -62,9 +62,13 @@ export function OfferProvider({ children }: { children: ReactNode }) {
                     : "Your offer has been submitted to the artist"
             );
             return true;
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Offer error:", err);
-            toast.error(err.message || "Failed to submit offer");
+            if (err instanceof Error) {
+                toast.error(err.message || "Failed to submit offer");
+            } else {
+                toast.error("Failed to submit offer");
+            }
             return false;
         } finally {
             setIsLoading(false);

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/artwork/review-processor",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

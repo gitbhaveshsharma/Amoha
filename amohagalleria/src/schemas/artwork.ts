@@ -59,7 +59,6 @@ const dimensionsValidator = z.string()
     .transform(val => val.replace(/\s+/g, ' ').trim());
 
 const imageValidator = z.custom<FileList>()
-    .optional() // Allow optional image during updates
     .refine(files => !files || files?.length >= 1, "Image is required")
     .refine(files => !files || files?.[0]?.size <= 10 * 1024 * 1024, "Max file size is 10MB")
     .refine(files => !files || [

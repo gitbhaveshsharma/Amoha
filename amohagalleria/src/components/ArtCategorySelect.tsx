@@ -1,7 +1,7 @@
 // components/ArtCategorySelect.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useArtCategoryStore } from "@/stores/ArtCategory/artCategoryStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
@@ -12,26 +12,43 @@ import { ArtworkFormValues } from "@/schemas/artwork";
 interface ArtCategorySelectProps {
     field: ControllerRenderProps<ArtworkFormValues, "art_category">;
     disabled?: boolean;
+    artworkId?: string; // Add artworkId to force re-render
 }
-export const ArtCategorySelect = ({ field, disabled }: ArtCategorySelectProps) => {
+
+export const ArtCategorySelect = ({ field, disabled, artworkId }: ArtCategorySelectProps) => {
     const { categories, isLoading, error, fetchCategories } = useArtCategoryStore();
+    const [internalValue, setInternalValue] = useState<ArtCategorySlug | "">("");
     const filteredCategories = categories.filter(cat => !cat.is_banned);
 
-    // Add useEffect to fetch categories when component mounts
+    // Load categories on mount and when artwork changes
     useEffect(() => {
         fetchCategories();
-    }, [fetchCategories]);
+    }, [fetchCategories, artworkId]); // Add artworkId to dependencies
 
-    // // Debug logs
-    // console.log('Categories:', categories);
-    // console.log('Filtered Categories:', filteredCategories);
-    // console.log('Loading:', isLoading);
-    // console.log('Error:', error);
+    // Synchronize internal state with form state
+    useEffect(() => {
+        if (field.value && filteredCategories.length > 0) {
+            const isValidValue = filteredCategories.some(cat => cat.slug === field.value);
+            if (isValidValue) {
+                setInternalValue(field.value);
+            } else {
+                setInternalValue("");
+                field.onChange("");
+            }
+        } else {
+            setInternalValue("");
+        }
+    }, [field.value, filteredCategories]);
+
+    const handleValueChange = (value: ArtCategorySlug) => {
+        setInternalValue(value);
+        field.onChange(value);
+    };
 
     return (
         <Select
-            onValueChange={(value: ArtCategorySlug) => field.onChange(value)}
-            value={field.value}
+            onValueChange={handleValueChange}
+            value={internalValue}
             disabled={disabled || isLoading || !!error}
         >
             <SelectTrigger className="w-full">
