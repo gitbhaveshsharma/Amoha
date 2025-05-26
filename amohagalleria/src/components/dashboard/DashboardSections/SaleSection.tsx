@@ -1,5 +1,6 @@
 import { useSaleStore } from '@/stores/sale/saleStore';
 import { useSession } from '@/hooks/useSession';
+import { useProfileStore } from "@/stores/profile/profileStore";
 import { useEffect } from 'react';
 import { SalesTable } from '../sales/SalesTable';
 import { SalesStats } from '../sales/SalesStats';
@@ -7,9 +8,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { Card, CardContent } from '@/components/ui/card';
+import AdminSales from '../admin/sales/AdminSales';
 
 export function SaleSection() {
     const { session } = useSession();
+    const { isAdmin } = useProfileStore();
     const { sales, loading, error, fetchSales, clearSales } = useSaleStore();
 
     useEffect(() => {
@@ -22,12 +25,14 @@ export function SaleSection() {
         return () => {
             clearSales();
         };
-    }, [session?.user.id, fetchSales, clearSales]);
-
-    // Additional protection in render
+    }, [session?.user.id, fetchSales, clearSales]);    // Additional protection in render
     const filteredSales = sales.filter(sale =>
         sale.artwork?.user_id === session?.user.id
     );
+
+    if (isAdmin()) {
+        return <AdminSales />;
+    }
 
     return (
         <div className="space-y-6">

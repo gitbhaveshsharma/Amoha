@@ -31,7 +31,7 @@ const HomeSection = () => {
                 const { data: artworksData, error } = await supabase
                     .from("artworks")
                     .select("id, title, image_url, artist_price, description, user_id")
-                    .eq("status", "pending_review");
+                    .eq("status", "listed");
 
                 if (error) throw error;
 
