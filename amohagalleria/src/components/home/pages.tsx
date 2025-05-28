@@ -3,8 +3,8 @@
 
 import React, { useEffect } from 'react';
 import { useHomeStore } from '@/stores/home/homeStore';
+import { HeroSection } from './components/HeroSection';
 import {
-    HeroSection,
     StatsSection,
     FeaturedSection,
     NewestSection,
@@ -132,8 +132,8 @@ const HomePage: React.FC = () => {
         fetchHomePageData();
     };
 
-    // Show loading state on initial load
-    if (isInitialLoading && !lastUpdated) {
+    // Show loading state on initial load or if we have no data yet
+    if (isInitialLoading || !lastUpdated) {
         return <HomePageSkeleton />;
     }
 
@@ -144,29 +144,9 @@ const HomePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header */}
-            <header className="border-b">
-                <div className="container mx-auto px-4 py-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold">Art Gallery</h1>
-                            <p className="text-muted-foreground mt-1">
-                                Discover amazing artworks from talented artists
-                            </p>
-                        </div>
-
-                        <Button onClick={handleRefresh} variant="outline" disabled={isInitialLoading}>
-                            <RefreshCw className={`h-4 w-4 mr-2 ${isInitialLoading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </Button>
-                    </div>
-                </div>
-            </header>
-
-            {/* Main content */}
             <main className="container mx-auto px-4 py-8">
                 {/* Show error alerts if there are issues but we have some data */}
-                {hasCriticalError && lastUpdated && (
+                {hasCriticalError && (
                     <Alert className="mb-8 border-yellow-200 bg-yellow-50">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>

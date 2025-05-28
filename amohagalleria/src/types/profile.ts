@@ -1,3 +1,4 @@
+//types/profile.ts
 export interface ProfileData {
     id: string;
     user_id: string;

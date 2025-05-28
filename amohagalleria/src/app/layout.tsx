@@ -30,6 +30,7 @@ export default function RootLayout({
         pauseOnHover
         theme="light"
       />
+
       <ClientLayout>{children}</ClientLayout>
     </>
   );

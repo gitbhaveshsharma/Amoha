@@ -27,7 +27,7 @@ export function MakeOfferButton({
     artistId,
     currentPrice,
     isAuction = false,
-    minOfferPercentage = 0.8,
+    minOfferPercentage = 1.05,
     bidIncrementPercentage = 0.05,
     variant = "default",
     size = "default",
@@ -52,9 +52,7 @@ export function MakeOfferButton({
             )
         ),
         defaultValues: {
-            amount: highestBid
-                ? highestBid * (1 + bidIncrementPercentage)
-                : currentPrice * minOfferPercentage,
+            amount: 0, // Start with zero value
             message: "",
         },
     });
@@ -79,9 +77,7 @@ export function MakeOfferButton({
             const currentHighest = await fetchHighestBid();
             setHighestBid(currentHighest);
             form.reset({
-                amount: isAuction
-                    ? currentHighest * (1 + bidIncrementPercentage)
-                    : currentPrice * minOfferPercentage,
+                amount: typeof (highestBid ?? currentPrice) === "number" ? (highestBid ?? currentPrice) : Number(highestBid ?? currentPrice),
                 message: "",
             });
         }
@@ -91,6 +87,18 @@ export function MakeOfferButton({
     const onSubmit = async (values: { amount: number; message?: string }) => {
         try {
             setIsSubmitting(true);
+
+            // Additional client-side validation
+            if (isAuction && highestBid && values.amount <= highestBid) {
+                toast.error(`Your bid must be higher than the current highest bid of $${highestBid.toFixed(2)}`);
+                return;
+            }
+
+            if (!isAuction && values.amount < currentPrice * minOfferPercentage) {
+                toast.error(`Your offer must be at least $${(currentPrice * minOfferPercentage).toFixed(2)}`);
+                return;
+            }
+
             const success = await effectiveMakeOffer({
                 artworkId,
                 artistId,
@@ -166,21 +174,23 @@ export function MakeOfferButton({
                                                     }}
                                                     className="pl-8"
                                                     placeholder={
-                                                        highestBid
-                                                            ? `Minimum: $${(
-                                                                highestBid *
-                                                                (1 + bidIncrementPercentage)
-                                                            ).toFixed(2)}`
-                                                            : `Starting at: $${currentPrice.toFixed(2)}`
+                                                        isAuction
+                                                            ? highestBid
+                                                                ? `Minimum: $${(highestBid * (1 + bidIncrementPercentage)).toFixed(2)}`
+                                                                : `Starting at: $${currentPrice.toFixed(2)}`
+                                                            : `Minimum: $${(currentPrice * minOfferPercentage).toFixed(2)}`
                                                     }
+                                                    value={field.value || ""} // Ensure empty string when no value
                                                 />
                                             </div>
                                         </FormControl>
                                         <FormMessage />
                                         <p className="text-sm text-muted-foreground">
-                                            {highestBid
-                                                ? `Current highest bid: $${highestBid.toFixed(2)}`
-                                                : `Starting price: $${currentPrice.toFixed(2)}`}
+                                            {isAuction
+                                                ? highestBid
+                                                    ? `Current highest bid: ${highestBid.toFixed(2)}`
+                                                    : `Starting price: ${currentPrice.toFixed(2)}`
+                                                : `Minimum offer: ${(currentPrice * minOfferPercentage).toFixed(2)}`}
                                         </p>
                                     </FormItem>
                                 )}

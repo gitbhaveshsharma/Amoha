@@ -1,17 +1,15 @@
-
 // components/home/sections.tsx
 import React from 'react';
 import { useHomeStore } from '@/stores/home/homeStore';
-import {
-    ArtworkGrid,
-    InfiniteScrollGrid,
-    VirtualArtworkGrid
-} from './artwork-grid';
+import { ArtworkGrid } from './components/ArtworkGrid';
+import { VirtualArtworkGrid } from './components/VirtualArtworkGrid';
+import { InfiniteScrollGrid } from './components/InfiniteScrollGrid';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronRight, Sparkles, Clock, Shuffle, Grid3X3 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Featured This Week Section
 export const FeaturedSection: React.FC = () => {
@@ -21,6 +19,34 @@ export const FeaturedSection: React.FC = () => {
         featuredError,
         fetchFeaturedArtworks
     } = useHomeStore();
+
+    if (featuredLoading && featuredArtworks.length === 0) {
+        return (
+            <section className="mb-12">
+                <div className="flex items-center gap-2 mb-6">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-6 w-12 rounded-full" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Card key={i} className="overflow-hidden">
+                            <Skeleton className="aspect-square w-full" />
+                            <CardContent className="p-4 space-y-2">
+                                <Skeleton className="h-4 w-3/4" />
+                                <Skeleton className="h-3 w-full" />
+                                <Skeleton className="h-3 w-2/3" />
+                                <div className="flex justify-between">
+                                    <Skeleton className="h-5 w-16" />
+                                    <Skeleton className="h-4 w-12" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="mb-12">
@@ -70,6 +96,34 @@ export const NewestSection: React.FC = () => {
         }
     };
 
+    if (newestLoading && newestArtworks.length === 0) {
+        return (
+            <section className="mb-12">
+                <div className="flex items-center gap-2 mb-6">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-6 w-12 rounded-full" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <Card key={i} className="overflow-hidden">
+                            <Skeleton className="aspect-square w-full" />
+                            <CardContent className="p-4 space-y-2">
+                                <Skeleton className="h-4 w-3/4" />
+                                <Skeleton className="h-3 w-full" />
+                                <Skeleton className="h-3 w-2/3" />
+                                <div className="flex justify-between">
+                                    <Skeleton className="h-5 w-16" />
+                                    <Skeleton className="h-4 w-12" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </section>
+        );
+    }
+
     return (
         <section className="mb-12">
             <div className="flex items-center gap-2 mb-6">
@@ -101,6 +155,22 @@ export const RandomSection: React.FC = () => {
         refreshRandomSeed
     } = useHomeStore();
 
+    if (randomLoading && randomArtworks.length === 0) {
+        return (
+            <section className="mb-12">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-6 w-6 rounded-full" />
+                        <Skeleton className="h-8 w-48" />
+                        <Skeleton className="h-6 w-12 rounded-full" />
+                    </div>
+                    <Skeleton className="h-9 w-24" />
+                </div>
+                <Skeleton className="h-[500px] w-full rounded-lg" />
+            </section>
+        );
+    }
+
     return (
         <section className="mb-12">
             <div className="flex items-center justify-between mb-6">
@@ -129,8 +199,6 @@ export const RandomSection: React.FC = () => {
                     loading={randomLoading}
                     title="Discover Something New"
                     height={500}
-                    itemWidth={250}
-                    itemHeight={320}
                 />
             </Card>
         </section>
@@ -146,6 +214,38 @@ export const CategoriesSection: React.FC = () => {
         categoriesError,
         fetchCategoriesAndArtworks
     } = useHomeStore();
+
+    if (categoriesLoading && categories.length === 0) {
+        return (
+            <section className="mb-12">
+                <div className="flex items-center gap-2 mb-6">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-8 w-48" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-10 w-full rounded-md" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Card key={i} className="overflow-hidden">
+                            <Skeleton className="aspect-square w-full" />
+                            <CardContent className="p-4 space-y-2">
+                                <Skeleton className="h-4 w-3/4" />
+                                <Skeleton className="h-3 w-full" />
+                                <Skeleton className="h-3 w-2/3" />
+                                <div className="flex justify-between">
+                                    <Skeleton className="h-5 w-16" />
+                                    <Skeleton className="h-4 w-12" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="mb-12">
@@ -198,80 +298,14 @@ export const CategoriesSection: React.FC = () => {
     );
 };
 
-// Hero section with featured artwork
-export const HeroSection: React.FC = () => {
-    const { featuredArtworks } = useHomeStore();
-    const heroArtwork = featuredArtworks[0];
-
-    if (!heroArtwork) return null;
-
-    return (
-        <section className="mb-12">
-            <Card className="relative overflow-hidden bg-gradient-to-r from-purple-500/10 to-blue-500/10">
-                <CardContent className="p-0">
-                    <div className="grid md:grid-cols-2 gap-8 items-center min-h-[400px]">
-                        <div className="p-8">
-                            <Badge className="mb-4 bg-yellow-500 hover:bg-yellow-600">
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                Featured Artwork
-                            </Badge>
-
-                            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                                {heroArtwork.title}
-                            </h1>
-
-                            <p className="text-lg text-muted-foreground mb-6 line-clamp-3">
-                                {heroArtwork.description}
-                            </p>
-
-                            <div className="flex flex-wrap gap-4 mb-6">
-                                <Badge variant="outline" className="text-sm">
-                                    {heroArtwork.art_category}
-                                </Badge>
-                                <Badge variant="outline" className="text-sm">
-                                    {heroArtwork.medium}
-                                </Badge>
-                                {heroArtwork.artist_price && (
-                                    <Badge variant="outline" className="text-sm">
-                                        {heroArtwork.currency} {heroArtwork.artist_price}
-                                    </Badge>
-                                )}
-                            </div>
-
-                            <div className="flex gap-4">
-                                <Button size="lg" className="group">
-                                    View Details
-                                    <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                                </Button>
-                                <Button variant="outline" size="lg">
-                                    Add to Favorites
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="relative aspect-square md:aspect-auto md:h-[400px]">
-                            {heroArtwork.image_url && (
-                                <img
-                                    src={heroArtwork.image_url}
-                                    alt={heroArtwork.title}
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                />
-                            )}
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </section>
-    );
-};
-
 // Stats section
 export const StatsSection: React.FC = () => {
     const {
         featuredArtworks,
         newestPagination,
         randomArtworks,
-        categories
+        categories,
+        isInitialLoading
     } = useHomeStore();
 
     const stats = [
@@ -300,6 +334,24 @@ export const StatsSection: React.FC = () => {
             color: 'text-purple-500'
         }
     ];
+
+    if (isInitialLoading) {
+        return (
+            <section className="mb-12">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Card key={i}>
+                            <CardContent className="p-6 text-center space-y-2">
+                                <Skeleton className="h-8 w-8 mx-auto" />
+                                <Skeleton className="h-8 w-16 mx-auto" />
+                                <Skeleton className="h-4 w-24 mx-auto" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="mb-12">
