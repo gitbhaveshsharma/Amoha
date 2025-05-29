@@ -1,7 +1,10 @@
 'use client';
 import { notFound } from 'next/navigation';
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useArtworkStore } from '@/stores/view-artwork/viewArtworkStore';
+import { getDeviceId } from '@/lib/deviceFingerprint';
+import { useArtworkEngagement } from '@/hooks/useArtworkEngagement';
+import { supabase } from '@/lib/supabase';
 import ArtworkDetails from './components/ArtworkDetails';
 import ArtistProfile from './components/ArtistProfile';
 import RelatedArtworks from './components/RelatedArtworks';
@@ -16,7 +19,69 @@ interface ArtworkPageProps {
 }
 
 export default function ArtworkPage({ params }: ArtworkPageProps) {
-    const { id } = use(params);
+    const [id, setId] = useState<string | null>(null);
+    const [deviceId, setDeviceId] = useState<string | null>(null);
+    const [deviceIdLoading, setDeviceIdLoading] = useState(true);
+    const [paramsLoading, setParamsLoading] = useState(true);
+    const [userId, setUserId] = useState<string | null>(null);
+    const [userLoading, setUserLoading] = useState(true);
+
+    // Generate sessionId only once and memoize it
+    const sessionId = useMemo(() => `session_${Date.now()}`, []);
+
+    // Await params to get the id
+    useEffect(() => {
+        const getParams = async () => {
+            try {
+                const resolvedParams = await params;
+                setId(resolvedParams.id);
+            } catch (error) {
+                console.error('Error resolving params:', error);
+            } finally {
+                setParamsLoading(false);
+            }
+        };
+        getParams();
+    }, [params]);
+
+    useEffect(() => {
+        const fetchDeviceId = async () => {
+            try {
+                const deviceId = await getDeviceId();
+                setDeviceId(deviceId);
+            } finally {
+                setDeviceIdLoading(false);
+            }
+        };
+        fetchDeviceId();
+    }, []);
+
+    // Check if user is authenticated
+    useEffect(() => {
+        const getUser = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                setUserId(user?.id || null);
+            } catch (error) {
+                console.error('Error getting user:', error);
+                setUserId(null);
+            } finally {
+                setUserLoading(false);
+            }
+        };
+
+        getUser();
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            (event, session) => {
+                setUserId(session?.user?.id || null);
+            }
+        );
+
+        return () => subscription.unsubscribe();
+    }, [supabase.auth]);
+
     const {
         artwork,
         artist,
@@ -30,6 +95,15 @@ export default function ArtworkPage({ params }: ArtworkPageProps) {
     } = useArtworkStore();
 
     const [initialLoad, setInitialLoad] = useState(true);
+
+    // Initialize engagement tracking with stable sessionId
+    const { endEngagement } = useArtworkEngagement({
+        artworkId: id || '',
+        deviceId: deviceId || '',
+        userId,
+        sessionId, // Now stable across re-renders
+        enabled: !deviceIdLoading && !paramsLoading && !userLoading && !!id
+    });
 
     useEffect(() => {
         if (!id) return;
@@ -59,7 +133,14 @@ export default function ArtworkPage({ params }: ArtworkPageProps) {
         }
     }, [artwork, fetchRelatedArtworks]);
 
-    if (initialLoad) {
+    // Clean up engagement on component unmount
+    useEffect(() => {
+        return () => {
+            endEngagement();
+        };
+    }, [endEngagement]);
+
+    if (paramsLoading || deviceIdLoading || userLoading || initialLoad) {
         return (
             <div className="container py-8 space-y-12">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
