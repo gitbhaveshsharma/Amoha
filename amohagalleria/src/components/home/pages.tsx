@@ -11,6 +11,7 @@ import {
     RandomSection,
     CategoriesSection
 } from './home-sections';
+import { RecentViewedArtworks } from '@/components/RecentViewsArtwork';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -179,6 +180,8 @@ const HomePage: React.FC = () => {
 
                 {/* Explore by Style */}
                 <CategoriesSection />
+                {/* Recently Viewed Artworks */}
+                <RecentViewedArtworks />
             </main>
 
             {/* Footer */}
