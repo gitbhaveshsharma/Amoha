@@ -1,38 +1,51 @@
 "use client";
 
 import { Heart } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useWishlistStore } from "@/stores/wishlist";
 
-export function WishlistButton({ artworkId }: { artworkId: string }) {
+export const WishlistButton = memo(function WishlistButton({
+    artworkId
+}: {
+    artworkId: string
+}) {
     const [isProcessing, setIsProcessing] = useState(false);
+    // Only select the needed values from the store to minimize re-renders
     const {
         isInWishlist,
         isLoading,
         toggleWishlistItem,
         fetchWishlist
-    } = useWishlistStore();
+    } = useWishlistStore(
+        useCallback((state) => ({
+            isInWishlist: state.isInWishlist,
+            isLoading: state.isLoading,
+            toggleWishlistItem: state.toggleWishlistItem,
+            fetchWishlist: state.fetchWishlist,
+        }), [])
+    );
 
-    useEffect(() => {
-        fetchWishlist();
-    }, [fetchWishlist]);
-
+    // Memoize the active state to prevent unnecessary re-renders
     const isActive = isInWishlist(artworkId);
 
-    const handleClick = async () => {
+    // Memoize the click handler
+    const handleClick = useCallback(async () => {
         if (isLoading || isProcessing) return;
         setIsProcessing(true);
 
         try {
             await toggleWishlistItem(artworkId);
-            // The toast messages are now handled in the userWishlist.toggleWishlistItem
         } catch (error) {
             console.error("Error toggling wishlist item:", error);
-            // Error handling is done in the store and userWishlist
         } finally {
             setIsProcessing(false);
         }
-    };
+    }, [isLoading, isProcessing, toggleWishlistItem, artworkId]);
+
+    // Only fetch wishlist once on mount
+    useEffect(() => {
+        fetchWishlist();
+    }, [fetchWishlist]);
 
     return (
         <button
@@ -48,4 +61,4 @@ export function WishlistButton({ artworkId }: { artworkId: string }) {
             />
         </button>
     );
-}
+});

@@ -44,7 +44,7 @@ export function RecentViewedArtworks() {
                 setLoading(true);
                 let artworkIds: string[] = [];
                 try {
-                    artworkIds = await getRecentViews(deviceId, 5);
+                    artworkIds = await getRecentViews(deviceId, 6);
                 } catch (error) {
                     console.error('[RecentViewed] Error fetching recent views:', error);
                 }
@@ -66,7 +66,7 @@ export function RecentViewedArtworks() {
                         console.error(`[RecentViewed] Error loading artwork ${id}:`, error);
                     }
 
-                    if (artworks.length >= 4) break;
+                    if (artworks.length >= 6) break;
                 }
 
                 setRecentArtworks(artworks);
@@ -97,7 +97,7 @@ export function RecentViewedArtworks() {
 
             {loading ? (
                 <div className="flex justify-end gap-2">
-                    {[...Array(4)].map((_, i) => (
+                    {[...Array(6)].map((_, i) => (
                         <Skeleton key={i} className="w-[200px] h-[200px] rounded-md" />
                     ))}
                 </div>

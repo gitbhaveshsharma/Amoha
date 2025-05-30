@@ -3,6 +3,10 @@
     {
       "path": "/api/artwork/review-processor",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/engagement/migrate",
+      "schedule": "*/20 * * * *"
     }
   ]
 }

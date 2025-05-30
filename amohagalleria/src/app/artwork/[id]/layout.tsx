@@ -1,6 +1,7 @@
 import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import { EngagementProvider } from '@/context/EngagementContext';
+import Footer from "@/components/layout/Footer";
 
 
 export default function ArtworkLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,8 @@ export default function ArtworkLayout({ children }: { children: React.ReactNode 
             </div>
 
             {/* Add any additional layout components here, such as a sidebar or footer */}
+            <Footer />
+
         </div>
     );
 }

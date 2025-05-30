@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useArtworkStore } from '@/stores/view-artwork/viewArtworkStore';
 import { getDeviceId } from '@/lib/deviceFingerprint';
 import { useArtworkEngagement } from '@/hooks/useArtworkEngagement';
+import { RecentViewedArtworks } from '@/components/RecentViewsArtwork';
 import { supabase } from '@/lib/supabase';
 import ArtworkDetails from './components/ArtworkDetails';
 import ArtistProfile from './components/ArtistProfile';
@@ -237,6 +238,7 @@ export default function ArtworkPage({ params }: ArtworkPageProps) {
             {relatedArtworks.length > 0 && (
                 <RelatedArtworks artworks={relatedArtworks} />
             )}
+            <RecentViewedArtworks />
         </motion.div>
     );
 }

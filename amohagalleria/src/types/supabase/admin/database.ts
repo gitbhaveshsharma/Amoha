@@ -139,6 +139,53 @@ export type Database = {
                     created_at?: string;
                 };
             };
+            artwork_engagements: {
+                Row: {
+                    id: string;
+                    user_id: string | null;
+                    artwork_id: string;
+                    device_id: string;
+                    ip_address: string;
+                    user_agent: string;
+                    view_start_time: string;
+                    view_duration: number;
+                    last_interaction: string | null;
+                    referrer: string | null;
+                    session_id: string | null;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    user_id?: string | null;
+                    artwork_id: string;
+                    device_id: string;
+                    ip_address: string;
+                    user_agent: string;
+                    view_start_time: string;
+                    view_duration?: number;
+                    last_interaction?: string | null;
+                    referrer?: string | null;
+                    session_id?: string | null;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    id?: string;
+                    user_id?: string | null;
+                    artwork_id?: string;
+                    device_id?: string;
+                    ip_address?: string;
+                    user_agent?: string;
+                    view_start_time?: string;
+                    view_duration?: number;
+                    last_interaction?: string | null;
+                    referrer?: string | null;
+                    session_id?: string | null;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+            };
             // Add other tables as needed
         };
         Views: {

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import Image from 'next/image';
-import { Eye, Heart, Share2, ExternalLink, Palette } from 'lucide-react';
+import { Eye, Share2, ExternalLink, Palette } from 'lucide-react';
 import { Artwork } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { WishlistButton } from '@/components/WishlistButton';
 
 interface ArtworkCardProps {
     artwork: Artwork;
@@ -11,12 +12,12 @@ interface ArtworkCardProps {
     priority?: boolean;
 }
 
-export const ArtworkCard: React.FC<ArtworkCardProps> = ({
+export const ArtworkCard = memo(function ArtworkCard({
     artwork,
     className = "",
     showActions = true,
     priority = false
-}) => {
+}: ArtworkCardProps) {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
 
@@ -70,13 +71,9 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
                                 >
                                     <Eye className="h-4 w-4" />
                                 </button>
-                                <button
-                                    className="h-8 w-8 p-0 bg-white/90 hover:bg-white rounded-full flex items-center justify-center"
-                                    onClick={(e) => handleActionClick(e, 'favorite')}
-                                    title="Add to Favorites"
-                                >
-                                    <Heart className="h-4 w-4" />
-                                </button>
+
+                                {/* <WishlistButton artworkId={artwork.id} /> */}
+
                                 <button
                                     className="h-8 w-8 p-0 bg-white/90 hover:bg-white rounded-full flex items-center justify-center"
                                     onClick={(e) => handleActionClick(e, 'share')}
@@ -140,7 +137,7 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
             </div>
         </a>
     );
-};
+});
 
 export const ArtworkCardSkeleton: React.FC = () => (
     <div className="overflow-hidden h-full rounded-lg border border-gray-200">

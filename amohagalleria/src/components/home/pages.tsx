@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import Footer from '@/components/layout/Footer';
 
 // Loading component for initial page load
 const HomePageSkeleton: React.FC = () => (
@@ -181,46 +182,10 @@ const HomePage: React.FC = () => {
                 {/* Explore by Style */}
                 <CategoriesSection />
                 {/* Recently Viewed Artworks */}
-                <RecentViewedArtworks />
-            </main>
+                <RecentViewedArtworks />            </main>
 
             {/* Footer */}
-            <footer className="border-t mt-16">
-                <div className="container mx-auto px-4 py-8">
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div>
-                            <h3 className="font-semibold mb-4">About Art Gallery</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Discover and collect amazing artworks from talented artists around the world.
-                            </p>
-                        </div>
-
-                        <div>
-                            <h3 className="font-semibold mb-4">Quick Links</h3>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li><a href="#" className="hover:text-foreground">Browse Artworks</a></li>
-                                <li><a href="#" className="hover:text-foreground">Featured Artists</a></li>
-                                <li><a href="#" className="hover:text-foreground">Categories</a></li>
-                                <li><a href="#" className="hover:text-foreground">New Releases</a></li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h3 className="font-semibold mb-4">Stats</h3>
-                            <div className="text-sm text-muted-foreground space-y-1">
-                                {lastUpdated && (
-                                    <p>Last updated: {new Date(lastUpdated).toLocaleTimeString()}</p>
-                                )}
-                                <p>Data refreshed automatically</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-                        <p>&copy; 2025 Art Gallery. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 };
