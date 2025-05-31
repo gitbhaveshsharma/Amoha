@@ -4,6 +4,10 @@ export interface Artwork {
     title: string;
     description: string;
     image_url: string | null;
+    image_1_url: string | null;
+    image_2_url: string | null;
+    image_3_url: string | null;
+    image_4_url: string | null;
     status: string;
     dimensions: string;
     date: string;

@@ -3,19 +3,21 @@
 
 import React, { useEffect } from 'react';
 import { useHomeStore } from '@/stores/home/homeStore';
+import { HeroSection } from './components/HeroSection';
 import {
-    HeroSection,
     StatsSection,
     FeaturedSection,
     NewestSection,
     RandomSection,
     CategoriesSection
 } from './home-sections';
+import { RecentViewedArtworks } from '@/components/RecentViewsArtwork';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import Footer from '@/components/layout/Footer';
 
 // Loading component for initial page load
 const HomePageSkeleton: React.FC = () => (
@@ -132,8 +134,8 @@ const HomePage: React.FC = () => {
         fetchHomePageData();
     };
 
-    // Show loading state on initial load
-    if (isInitialLoading && !lastUpdated) {
+    // Show loading state on initial load or if we have no data yet
+    if (isInitialLoading || !lastUpdated) {
         return <HomePageSkeleton />;
     }
 
@@ -144,29 +146,9 @@ const HomePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header */}
-            <header className="border-b">
-                <div className="container mx-auto px-4 py-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold">Art Gallery</h1>
-                            <p className="text-muted-foreground mt-1">
-                                Discover amazing artworks from talented artists
-                            </p>
-                        </div>
-
-                        <Button onClick={handleRefresh} variant="outline" disabled={isInitialLoading}>
-                            <RefreshCw className={`h-4 w-4 mr-2 ${isInitialLoading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </Button>
-                    </div>
-                </div>
-            </header>
-
-            {/* Main content */}
             <main className="container mx-auto px-4 py-8">
                 {/* Show error alerts if there are issues but we have some data */}
-                {hasCriticalError && lastUpdated && (
+                {hasCriticalError && (
                     <Alert className="mb-8 border-yellow-200 bg-yellow-50">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
@@ -199,45 +181,11 @@ const HomePage: React.FC = () => {
 
                 {/* Explore by Style */}
                 <CategoriesSection />
-            </main>
+                {/* Recently Viewed Artworks */}
+                <RecentViewedArtworks />            </main>
 
             {/* Footer */}
-            <footer className="border-t mt-16">
-                <div className="container mx-auto px-4 py-8">
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div>
-                            <h3 className="font-semibold mb-4">About Art Gallery</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Discover and collect amazing artworks from talented artists around the world.
-                            </p>
-                        </div>
-
-                        <div>
-                            <h3 className="font-semibold mb-4">Quick Links</h3>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li><a href="#" className="hover:text-foreground">Browse Artworks</a></li>
-                                <li><a href="#" className="hover:text-foreground">Featured Artists</a></li>
-                                <li><a href="#" className="hover:text-foreground">Categories</a></li>
-                                <li><a href="#" className="hover:text-foreground">New Releases</a></li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h3 className="font-semibold mb-4">Stats</h3>
-                            <div className="text-sm text-muted-foreground space-y-1">
-                                {lastUpdated && (
-                                    <p>Last updated: {new Date(lastUpdated).toLocaleTimeString()}</p>
-                                )}
-                                <p>Data refreshed automatically</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-                        <p>&copy; 2025 Art Gallery. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 };

@@ -100,7 +100,9 @@ export const GuestNotificationService = {
                 .eq('device_fingerprint', deviceId)
                 .single();
 
-            return data?.push_subscription;
+            return typeof data?.push_subscription === 'object' && data?.push_subscription !== null
+                ? data.push_subscription
+                : null;
         } catch (error) {
             console.error('Error getting push subscription:', error);
             return null;
