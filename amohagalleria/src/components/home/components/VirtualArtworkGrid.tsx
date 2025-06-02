@@ -4,6 +4,7 @@ import type { GridChildComponentProps } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 import { RefreshCw } from 'lucide-react';
 import { ArtworkCard, ArtworkCardSkeleton } from './ArtworkCard';
+import { QuickViewModal } from '@/components/QuickViewModal';
 import { Artwork } from '@/types';
 
 interface VirtualArtworkGridProps {
@@ -25,6 +26,10 @@ export const VirtualArtworkGrid: React.FC<VirtualArtworkGridProps> = ({
     height = 800,
     className
 }) => {
+    // Quick View Modal state
+    const [quickViewOpen, setQuickViewOpen] = useState(false);
+    const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null);
+
     const [containerWidth, setContainerWidth] = useState(1200);
     const containerRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<FixedSizeGrid>(null);
@@ -50,14 +55,22 @@ export const VirtualArtworkGrid: React.FC<VirtualArtworkGridProps> = ({
 
         const itemHeight = itemWidth + 160;
         return { columns, itemWidth, itemHeight, gap };
-    }, []);
-
-    const [gridDimensions, setGridDimensions] = useState(() =>
+    }, []); const [gridDimensions, setGridDimensions] = useState(() =>
         calculateGridDimensions(containerWidth)
     );
 
-    useEffect(() => {
+    const handleQuickView = useCallback((artwork: Artwork) => {
+        setSelectedArtwork(artwork);
+        setQuickViewOpen(true);
+    }, []);
+
+    const handleCloseQuickView = useCallback(() => {
+        setQuickViewOpen(false);
+        setSelectedArtwork(null);
+    }, []); useEffect(() => {
         if (!containerRef.current) return;
+
+        const currentContainer = containerRef.current;
 
         const updateWidth = () => {
             if (containerRef.current) {
@@ -70,11 +83,11 @@ export const VirtualArtworkGrid: React.FC<VirtualArtworkGridProps> = ({
         updateWidth();
 
         const resizeObserver = new ResizeObserver(updateWidth);
-        resizeObserver.observe(containerRef.current);
+        resizeObserver.observe(currentContainer);
 
         return () => {
-            if (containerRef.current) {
-                resizeObserver.unobserve(containerRef.current);
+            if (currentContainer) {
+                resizeObserver.unobserve(currentContainer);
             }
             resizeObserver.disconnect();
         };
@@ -132,18 +145,17 @@ export const VirtualArtworkGrid: React.FC<VirtualArtworkGridProps> = ({
                 );
             }
 
-            if (!artwork) return <div style={itemStyle} />;
-
-            return (
+            if (!artwork) return <div style={itemStyle} />; return (
                 <div style={itemStyle}>
                     <ArtworkCard
                         artwork={artwork}
                         priority={index < columnsCount * 2}
+                        onQuickView={handleQuickView}
                     />
                 </div>
             );
         },
-        [artworks, columnsCount, gridDimensions, hasMore]
+        [artworks, columnsCount, gridDimensions, hasMore, handleQuickView]
     );
 
     useEffect(() => {
@@ -213,14 +225,19 @@ export const VirtualArtworkGrid: React.FC<VirtualArtworkGridProps> = ({
                 <div className="flex justify-center py-4">
                     <RefreshCw className="h-6 w-6 animate-spin" />
                 </div>
-            )}
-
-            {!loading && artworks.length === 0 && (
+            )}            {!loading && artworks.length === 0 && (
                 <div className="text-center py-12 border rounded-lg bg-gray-50">
                     <h3 className="text-lg font-semibold mb-2">No artworks found</h3>
                     <p className="text-gray-500">Please try a different search or check back later</p>
                 </div>
             )}
+
+            {/* Quick View Modal */}
+            <QuickViewModal
+                isOpen={quickViewOpen}
+                onClose={handleCloseQuickView}
+                artwork={selectedArtwork}
+            />
         </div>
     );
 };

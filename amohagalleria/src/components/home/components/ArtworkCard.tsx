@@ -10,13 +10,15 @@ interface ArtworkCardProps {
     className?: string;
     showActions?: boolean;
     priority?: boolean;
+    onQuickView?: (artwork: Artwork) => void;
 }
 
 export const ArtworkCard = memo(function ArtworkCard({
     artwork,
     className = "",
     showActions = true,
-    priority = false
+    priority = false,
+    onQuickView
 }: ArtworkCardProps) {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -26,11 +28,15 @@ export const ArtworkCard = memo(function ArtworkCard({
     const handleActionClick = (e: React.MouseEvent, action: string) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log(`${action} clicked for artwork:`, artwork.id);
+        if (action === 'view' && onQuickView) {
+            onQuickView(artwork);
+        } else {
+            console.log(`${action} clicked for artwork:`, artwork.id);
+        }
     };
 
     return (
-        <a href={artworkUrl} className={`block h-full group ${className}`}>
+        <div className={`block h-full group ${className}`}>
             <div className="h-full flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 cursor-pointer hover:border-primary/30 border border-gray-200 rounded-lg">
                 <div className="relative aspect-square overflow-hidden">
                     {imageLoading && (
@@ -71,8 +77,11 @@ export const ArtworkCard = memo(function ArtworkCard({
                                 >
                                     <Eye className="h-4 w-4" />
                                 </button>
-
-                                {/* <WishlistButton artworkId={artwork.id} /> */}
+                                <div className="h-8 w-8 p-0 bg-white/90 hover:bg-white rounded-full flex items-center justify-center"
+                                    title="Wishlist"
+                                >
+                                    <WishlistButton artworkId={artwork.id} />
+                                </div>
 
                                 <button
                                     className="h-8 w-8 p-0 bg-white/90 hover:bg-white rounded-full flex items-center justify-center"
@@ -108,34 +117,37 @@ export const ArtworkCard = memo(function ArtworkCard({
                         </div>
                     )}
                 </div>
+                <a href={artworkUrl} >
 
-                <div className="p-4 flex-1 flex flex-col">
-                    <h3 className="font-semibold text-sm mb-1 line-clamp-1 group-hover:text-primary transition-colors">
-                        {artwork.title}
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-2 line-clamp-2">
-                        {artwork.description}
-                    </p>
+                    <div className="p-4 flex-1 flex flex-col">
+                        <h3 className="font-semibold text-sm mb-1 line-clamp-1 group-hover:text-primary transition-colors">
+                            {artwork.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                            {artwork.description}
+                        </p>
 
-                    <div className="mt-auto flex items-center justify-between">
-                        <div className="flex flex-col">
-                            <Badge variant="secondary" className="text-sm font-medium">
-                                {artwork.art_category}
-                            </Badge>
-                            <span className="text-xs text-gray-500 mt-1">{artwork.medium}</span>
-                        </div>
-
-                        {artwork.artist_price && (
-                            <div className="text-right">
-                                <p className="text-sm font-semibold">
-                                    {artwork.currency} {artwork.artist_price}
-                                </p>
+                        <div className="mt-auto flex items-center justify-between">
+                            <div className="flex flex-col">
+                                <Badge variant="secondary" className="text-sm font-medium">
+                                    {artwork.art_category}
+                                </Badge>
+                                <span className="text-xs text-gray-500 mt-1">{artwork.medium}</span>
                             </div>
-                        )}
+
+                            {artwork.artist_price && (
+                                <div className="text-right">
+                                    <p className="text-sm font-semibold">
+                                        {artwork.currency} {artwork.artist_price}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </a>
+
             </div>
-        </a>
+        </div>
     );
 });
 

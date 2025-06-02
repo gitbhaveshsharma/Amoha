@@ -18,21 +18,16 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     isLoading: true,
 
     isInWishlist: (artworkId: string) => {
-        const result = get().wishlist.includes(artworkId);
-        console.log('isInWishlist:', { artworkId, result });
-        return result;
+        return get().wishlist.includes(artworkId);
     },
 
     fetchWishlist: async () => {
-        console.log('fetchWishlist: started');
         set({ isLoading: true });
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            console.log('fetchWishlist: user', user);
             const operations = user ? userWishlist : guestWishlist;
 
             const wishlist = await operations.fetchWishlist();
-            console.log('fetchWishlist: fetched wishlist', wishlist);
             set({ wishlist, isLoading: false });
         } catch (error) {
             console.error('fetchWishlist: error', error);
@@ -41,10 +36,8 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     },
 
     toggleWishlistItem: async (artworkId: string) => {
-        console.log('toggleWishlistItem: started', { artworkId });
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            console.log('toggleWishlistItem: user', user);
             const operations = user ? userWishlist : guestWishlist;
 
             // Get current state before optimistic update
@@ -55,13 +48,11 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
                 const updatedWishlist = wasInWishlist
                     ? state.wishlist.filter((id) => id !== artworkId)
                     : [...state.wishlist, artworkId];
-                console.log('toggleWishlistItem: optimistic update', updatedWishlist);
                 return { wishlist: updatedWishlist };
             });
 
             // Perform the actual toggle operation
             const wasAdded = await operations.toggleWishlistItem(artworkId);
-            console.log('toggleWishlistItem: success', { wasAdded });
             return wasAdded;
         } catch (error) {
             console.error('toggleWishlistItem: error', error);
@@ -71,18 +62,14 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     },
 
     clearWishlist: async () => {
-        console.log('clearWishlist: started');
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            console.log('clearWishlist: user', user);
             const operations = user ? userWishlist : guestWishlist;
 
             // Optimistic update
             set({ wishlist: [] });
-            console.log('clearWishlist: optimistic update', []);
 
             await operations.clearWishlist();
-            console.log('clearWishlist: success');
         } catch (error) {
             console.error('clearWishlist: error', error);
             await get().fetchWishlist();

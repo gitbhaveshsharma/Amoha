@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { ArtworkCard, ArtworkCardSkeleton } from './ArtworkCard';
+import { QuickViewModal } from '@/components/QuickViewModal';
 import { Artwork } from '@/types';
 
 // Standard grid component with improved responsiveness
@@ -30,6 +31,10 @@ export const ArtworkGrid: React.FC<ArtworkGridProps> = ({
     className,
     columns = { sm: 2, md: 2, lg: 3, xl: 4 }
 }) => {
+    // Quick View Modal state
+    const [quickViewOpen, setQuickViewOpen] = useState(false);
+    const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null);
+
     const gridCols = useMemo(() => {
         // Always default to 2 columns on mobile
         return {
@@ -39,6 +44,16 @@ export const ArtworkGrid: React.FC<ArtworkGridProps> = ({
             xl: `xl:grid-cols-${columns.xl || 4}`
         };
     }, [columns]);
+
+    const handleQuickView = (artwork: Artwork) => {
+        setSelectedArtwork(artwork);
+        setQuickViewOpen(true);
+    };
+
+    const handleCloseQuickView = () => {
+        setQuickViewOpen(false);
+        setSelectedArtwork(null);
+    };
 
     if (error) {
         return (
@@ -79,24 +94,29 @@ export const ArtworkGrid: React.FC<ArtworkGridProps> = ({
                 {loading ? (
                     Array.from({ length: 8 }).map((_, i) => (
                         <ArtworkCardSkeleton key={`skeleton-${i}`} />
-                    ))
-                ) : (
+                    ))) : (
                     artworks.map((artwork, index) => (
                         <ArtworkCard
                             key={artwork.id}
                             artwork={artwork}
                             priority={index < 4}
+                            onQuickView={handleQuickView}
                         />
                     ))
                 )}
-            </div>
-
-            {!loading && artworks.length === 0 && (
+            </div>            {!loading && artworks.length === 0 && (
                 <div className="text-center py-12 border rounded-lg bg-gray-50">
                     <h3 className="text-lg font-semibold mb-2">No artworks found</h3>
                     <p className="text-gray-500">Please try a different search or check back later</p>
                 </div>
             )}
+
+            {/* Quick View Modal */}
+            <QuickViewModal
+                isOpen={quickViewOpen}
+                onClose={handleCloseQuickView}
+                artwork={selectedArtwork}
+            />
         </div>
     );
 };

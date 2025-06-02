@@ -6,14 +6,26 @@ import { toast } from "react-toastify";
 import { useCartStore } from "@/stores/cart";
 import { useEffect, useState } from "react";
 
-export function AddToCartButton({ artworkId }: { artworkId: string }) {
+interface AddToCartButtonProps {
+    artworkId: string;
+    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+    size?: "default" | "sm" | "lg" | "icon";
+    className?: string;
+}
+
+export function AddToCartButton({
+    artworkId,
+    variant = "outline",
+    size = "sm",
+    className = "",
+}: AddToCartButtonProps) {
     const {
         isInCart,
         toggleCartItem,
         isLoading,
         isRemoving,
         isAdding,
-        fetchCart
+        fetchCart,
     } = useCartStore();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,10 +54,11 @@ export function AddToCartButton({ artworkId }: { artworkId: string }) {
 
     return (
         <Button
-            variant="outline"
-            size="sm"
+            variant={variant}
+            size={size}
             onClick={handleCartAction}
             disabled={isProcessing || isSubmitting}
+            className={className}
         >
             {isProcessing ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
