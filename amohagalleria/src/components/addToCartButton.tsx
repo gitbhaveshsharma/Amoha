@@ -11,6 +11,7 @@ interface AddToCartButtonProps {
     variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
     size?: "default" | "sm" | "lg" | "icon";
     className?: string;
+    showTitle?: boolean;
 }
 
 export function AddToCartButton({
@@ -18,6 +19,7 @@ export function AddToCartButton({
     variant = "outline",
     size = "sm",
     className = "",
+    showTitle = true,
 }: AddToCartButtonProps) {
     const {
         isInCart,
@@ -31,6 +33,7 @@ export function AddToCartButton({
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const isProcessing = isLoading || (isInCart(artworkId) ? isRemoving : isAdding);
+    const isItemInCart = isInCart(artworkId);
 
     useEffect(() => {
         fetchCart();
@@ -52,20 +55,33 @@ export function AddToCartButton({
         }
     };
 
+    // Adjust styles when only icon is shown
+    const buttonClass = showTitle
+        ? className
+        : `${className} p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800`;
+
     return (
         <Button
-            variant={variant}
-            size={size}
+            variant={showTitle ? variant : "ghost"}
+            size={showTitle ? size : "icon"}
             onClick={handleCartAction}
             disabled={isProcessing || isSubmitting}
-            className={className}
+            className={buttonClass}
+            aria-label={isItemInCart ? "Remove from cart" : "Add to cart"}
         >
             {isProcessing ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-                <ShoppingCart className="h-4 w-4 mr-2" />
+                <>
+                    <ShoppingCart
+                        className={`h-4 w-4 ${showTitle ? "mr-2" : ""}`}
+                        style={{
+                            color: isItemInCart && !showTitle ? 'var(--destructive)' : undefined
+                        }}
+                    />
+                    {showTitle && (isItemInCart ? "Remove from Cart" : "Add to Cart")}
+                </>
             )}
-            {isInCart(artworkId) ? "Remove from Cart" : "Add to Cart"}
         </Button>
     );
 }

@@ -1,8 +1,11 @@
 "use client";
 
 import { Heart } from "lucide-react";
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useCallback, memo } from "react";
 import { useWishlistStore } from "@/stores/wishlist";
+
+// Global flag to ensure we only fetch once across all button instances
+let hasFetchedGlobally = false;
 
 export const WishlistButton = memo(function WishlistButton({
     artworkId
@@ -11,7 +14,7 @@ export const WishlistButton = memo(function WishlistButton({
 }) {
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Select only what we need from the store without useCallback wrapper
+    // Select only what we need from the store
     const isInWishlist = useWishlistStore((state) => state.isInWishlist);
     const isLoading = useWishlistStore((state) => state.isLoading);
     const toggleWishlistItem = useWishlistStore((state) => state.toggleWishlistItem);
@@ -34,10 +37,11 @@ export const WishlistButton = memo(function WishlistButton({
         }
     }, [isLoading, isProcessing, toggleWishlistItem, artworkId]);
 
-    // Only fetch wishlist once on mount
-    useEffect(() => {
+    // Fetch wishlist only once globally, not per component instance
+    if (!hasFetchedGlobally && isLoading) {
+        hasFetchedGlobally = true;
         fetchWishlist();
-    }, [fetchWishlist]);
+    }
 
     return (
         <button

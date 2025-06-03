@@ -174,11 +174,14 @@ export default function FavoritesPage() {
         artwork: Artwork;
         artist: ProfileData | null;
         images: string[];
-    } | null>(null);
+    } | null>(null); const [hasFetched, setHasFetched] = useState(false);
 
     useEffect(() => {
-        fetchWishlist();
-    }, [fetchWishlist]);
+        if (!hasFetched) {
+            fetchWishlist();
+            setHasFetched(true);
+        }
+    }, [fetchWishlist, hasFetched]);
 
     useEffect(() => {
         const fetchArtworkDetails = async () => {

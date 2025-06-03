@@ -13,6 +13,8 @@ type WishlistState = {
     clearWishlist: () => Promise<void>;
 };
 
+let isFetching = false; // Global flag to prevent concurrent fetches
+
 export const useWishlistStore = create<WishlistState>((set, get) => ({
     wishlist: [],
     isLoading: true,
@@ -22,7 +24,12 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     },
 
     fetchWishlist: async () => {
+        // Prevent concurrent fetches
+        if (isFetching) return;
+
+        isFetching = true;
         set({ isLoading: true });
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
             const operations = user ? userWishlist : guestWishlist;
@@ -32,6 +39,8 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         } catch (error) {
             console.error('fetchWishlist: error', error);
             set({ isLoading: false });
+        } finally {
+            isFetching = false;
         }
     },
 

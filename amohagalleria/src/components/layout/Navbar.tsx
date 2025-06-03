@@ -2,11 +2,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-    Home,
-    Upload,
     Heart,
     LogIn,
-    Search,
     Menu,
     X,
     User,
@@ -14,13 +11,13 @@ import {
     ChevronDown,
     LogOut,
     Package,
-    Palette,
     Settings,
-    HelpCircle
+    HelpCircle,
+    Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
-import SearchInput from "@/components/ui/SearchInput";
+import { ArtworkSearchInput } from "@/components/search/SearchInput";
 import { useRouter, usePathname } from "next/navigation";
 import DonationHeader from "./DonationHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -31,7 +28,6 @@ import { useSession } from "@/hooks/useSession";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-// Skeleton Loading Component
 const Skeleton = ({ className }: { className?: string }) => (
     <div className={`animate-pulse bg-gray-200 rounded ${className}`}></div>
 );
@@ -40,8 +36,6 @@ const Navbar: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-
-    // Scroll state management
     const [isVisible, setIsVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isAtTop, setIsAtTop] = useState(true);
@@ -52,7 +46,6 @@ const Navbar: React.FC = () => {
     const { session } = useSession();
     const { cart, fetchCart, isLoading: cartLoading } = useCartStore();
 
-    // Scroll handler
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
@@ -89,7 +82,6 @@ const Navbar: React.FC = () => {
         return () => window.removeEventListener('scroll', throttledHandleScroll);
     }, [lastScrollY]);
 
-    // Simulate loading state
     useEffect(() => {
         const timer = setTimeout(() => {
             setIsLoading(false);
@@ -97,18 +89,15 @@ const Navbar: React.FC = () => {
         return () => clearTimeout(timer);
     }, []);
 
-    // Fetch cart on component mount
     useEffect(() => {
         fetchCart();
     }, [fetchCart]);
 
-    // Close mobile menu when route changes
     useEffect(() => {
         setIsMenuOpen(false);
         setIsProfileMenuOpen(false);
     }, [pathname]);
 
-    // Close menus when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Element;
@@ -131,6 +120,7 @@ const Navbar: React.FC = () => {
             router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         } else {
             openUploadModal();
+            setIsProfileMenuOpen(false); // Close profile menu when upload is clicked
         }
     };
 
@@ -141,9 +131,9 @@ const Navbar: React.FC = () => {
     const isActive = (path: string) => pathname === path;
 
     const navItems = [
-        { href: "/", label: "Home", icon: Home },
-        { href: "/artworks", label: "Browse", icon: Palette },
-        { href: "/artists", label: "Artists", icon: User },
+        { href: "/", label: "Home" },
+        { href: "/artworks", label: "Browse" },
+        { href: "/artists", label: "Artists" },
     ];
 
     const CartButton = () => {
@@ -240,6 +230,16 @@ const Navbar: React.FC = () => {
                             <p className="text-xs text-gray-500">{session?.user.email}</p>
                         </div>
 
+                        <button
+                            onClick={handleUploadClick}
+                            className="flex items-center w-full px-4 py-2 text-sm text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors font-medium"
+                        >
+                            <Upload size={16} className="mr-3" />
+                            Upload Artwork
+                        </button>
+
+                        <div className="border-t border-gray-100 my-2"></div>
+
                         <Link
                             href="/dashboard"
                             className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -330,7 +330,6 @@ const Navbar: React.FC = () => {
 
     const MobileMenu = () => (
         <>
-            {/* Mobile Menu Overlay */}
             {isMenuOpen && (
                 <div
                     className="fixed inset-0 h-screen bg-black bg-opacity-50 z-40 md:hidden backdrop-blur-sm"
@@ -338,7 +337,6 @@ const Navbar: React.FC = () => {
                 />
             )}
 
-            {/* Mobile Menu Content */}
             <div
                 className={cn(
                     "fixed top-0 left-0 h-screen w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50",
@@ -346,7 +344,6 @@ const Navbar: React.FC = () => {
                     isMenuOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                {/* Mobile Menu Header */}
                 <div className="p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
                     <div className="flex items-center justify-between mb-4">
                         <Image
@@ -364,17 +361,13 @@ const Navbar: React.FC = () => {
                         </button>
                     </div>
 
-                    <SearchInput
-                        placeholderTexts={["Search artworks...", "Find by artist...", "Browse categories..."]}
-                        inputClassName="text-gray-700 border-gray-300 focus:ring-offset-2"
-                        icon={<Search className="text-gray-500" size={20} />}
-                        iconPosition="left"
+                    <ArtworkSearchInput
+                        placeholder="Search artworks..."
+                        className="w-full"
                     />
                 </div>
 
-                {/* Mobile Menu Body */}
                 <div className="flex-1 p-4 overflow-y-auto">
-                    {/* Navigation Section */}
                     <div className="mb-6">
                         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
                             Navigation
@@ -391,45 +384,41 @@ const Navbar: React.FC = () => {
                                             : 'text-gray-700 hover:bg-gray-50'
                                     )}
                                 >
-                                    <item.icon size={18} className="mr-3" />
                                     {item.label}
                                 </Link>
                             ))}
                         </div>
                     </div>
 
-                    {/* User Section */}
-                    {session && (
-                        <div className="mb-6">
-                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
-                                Your Account
-                            </h3>
-                            <div className="space-y-1">
-                                <Link
-                                    href="/favorites"
-                                    className="flex items-center px-3 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50"
-                                >
-                                    <Heart size={18} className="mr-3" />
-                                    Favorites
-                                </Link>
-                                <Link
-                                    href="/cart"
-                                    className="flex items-center px-3 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50"
-                                >
-                                    <ShoppingCart size={18} className="mr-3" />
-                                    Cart
-                                    {cart.length > 0 && (
-                                        <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                                            {cart.length > 99 ? '99+' : cart.length}
-                                        </span>
-                                    )}
-                                </Link>
-                                <NotificationBell />
-                            </div>
+                    {/* Always show these sections regardless of authentication status */}
+                    <div className="mb-6">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
+                            Your Actions
+                        </h3>
+                        <div className="space-y-1">
+                            <Link
+                                href="/favorites"
+                                className="flex items-center px-3 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50"
+                            >
+                                <Heart size={18} className="mr-3" />
+                                Favorites
+                            </Link>
+                            <Link
+                                href="/cart"
+                                className="flex items-center px-3 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50"
+                            >
+                                <ShoppingCart size={18} className="mr-3" />
+                                Cart
+                                {!cartLoading && cart.length > 0 && (
+                                    <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                                        {cart.length > 99 ? '99+' : cart.length}
+                                    </span>
+                                )}
+                            </Link>
+                            <NotificationBell />
                         </div>
-                    )}
+                    </div>
 
-                    {/* Help Section */}
                     <div className="mb-6">
                         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
                             Help & Settings
@@ -453,7 +442,6 @@ const Navbar: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Mobile Menu Footer */}
                 <div className="p-4 border-t border-gray-200 sticky bottom-0 bg-white">
                     {session ? (
                         <div className="space-y-3">
@@ -470,12 +458,15 @@ const Navbar: React.FC = () => {
                             </button>
                         </div>
                     ) : (
-                        <Link href="/login" passHref>
-                            <Button className="w-full">
-                                <LogIn size={16} className="mr-2" />
-                                Sign In
-                            </Button>
-                        </Link>
+                        <div className="space-y-3">
+                            <UploadButton mobile />
+                            <Link href="/login" passHref>
+                                <Button className="w-full">
+                                    <LogIn size={16} className="mr-2" />
+                                    Sign In
+                                </Button>
+                            </Link>
+                        </div>
                     )}
                 </div>
             </div>
@@ -494,7 +485,6 @@ const Navbar: React.FC = () => {
             <DonationHeader />
             <UploadModal />
 
-            {/* Mobile Header */}
             <div className="md:hidden flex items-center justify-between px-4 py-3">
                 <Link href="/" className="flex-shrink-0">
                     <Image
@@ -517,10 +507,8 @@ const Navbar: React.FC = () => {
                 </div>
             </div>
 
-            {/* Mobile Menu */}
             <MobileMenu />
 
-            {/* Desktop Menu */}
             <div className="hidden md:flex items-center justify-between px-6 py-4">
                 <Link href="/" className="flex-shrink-0">
                     <Image
@@ -532,46 +520,35 @@ const Navbar: React.FC = () => {
                     />
                 </Link>
 
-                {/* Navigation Items */}
                 <div className="flex items-center space-x-1 mx-8">
                     {navItems.map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
+                                "px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
                                 isActive(item.href)
                                     ? 'bg-primary/10 text-primary border border-primary/20'
                                     : 'text-gray-700 hover:bg-gray-50 hover:text-primary'
                             )}
                         >
-                            <item.icon size={18} className="mr-2" />
                             {item.label}
                         </Link>
                     ))}
                 </div>
 
-                {/* Search Bar */}
                 <div className="flex-1 max-w-md mx-8">
-                    <SearchInput
-                        placeholderTexts={["Search artworks...", "Find by artist...", "Browse categories..."]}
-                        inputClassName="text-gray-700 border-gray-300 focus:ring-offset-2"
-                        icon={<Search className="text-gray-500" size={20} />}
-                        iconPosition="left"
+                    <ArtworkSearchInput
+                        placeholder="Search artworks, artists, categories..."
+                        className="w-full"
                     />
                 </div>
 
-                {/* Right Side Actions */}
                 <div className="flex items-center space-x-3">
-                    {session && (
-                        <>
-                            <FavoritesButton />
-                            <CartButton />
-                            <UploadButton />
-                            <NotificationBell />
-                        </>
-                    )}
-
+                    <FavoritesButton />
+                    <CartButton />
+                    {session && <NotificationBell />}
+                    {!session && !isAuthRoute && <UploadButton />}
                     {renderAuthButton()}
                 </div>
             </div>

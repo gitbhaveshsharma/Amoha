@@ -2,12 +2,40 @@
 import { NextResponse } from 'next/server';
 import { getGuestWishlist, updateGuestWishlist, clearGuestWishlist } from '@/lib/server/redis';
 
-// app/api/wishlist/guest/route.ts
+// Simple in-memory rate limiting (use Redis in production)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+function checkRateLimit(deviceId: string, maxRequests = 5, windowMs = 60000): boolean {
+    const now = Date.now();
+    const key = `wishlist_${deviceId}`;
+
+    const current = rateLimitMap.get(key);
+
+    if (!current || now > current.resetTime) {
+        rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
+        return true;
+    }
+
+    if (current.count >= maxRequests) {
+        return false;
+    }
+
+    current.count++;
+    return true;
+}
+
 export async function GET(request: Request) {
     try {
         const deviceId = request.headers.get('device-id');
         if (!deviceId) {
             return NextResponse.json({ wishlist: [] });
+        }        // Rate limiting - max 5 requests per minute per device
+        if (!checkRateLimit(deviceId)) {
+            console.warn(`[GET Wishlist] Rate limit exceeded for device: ${deviceId}`);
+            return NextResponse.json(
+                { error: 'Too many requests' },
+                { status: 429 }
+            );
         }
 
         const wishlist = await getGuestWishlist(deviceId);
@@ -19,6 +47,9 @@ export async function GET(request: Request) {
 
         // Normal requests return only active items
         const activeWishlist = wishlist.filter(item => item.status === 'active');
+
+        console.log(`[GET Wishlist] Success for device: ${deviceId}, items: ${activeWishlist.length}`);
+
         return NextResponse.json({
             wishlist: activeWishlist.map(item => item.artwork_id)
         });
@@ -38,6 +69,13 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { error: 'Device ID not found' },
                 { status: 400 }
+            );
+        }        // Rate limiting for POST requests - max 10 requests per minute
+        if (!checkRateLimit(deviceId, 10, 60000)) {
+            console.warn(`[POST Wishlist] Rate limit exceeded for device: ${deviceId}`);
+            return NextResponse.json(
+                { error: 'Too many requests' },
+                { status: 429 }
             );
         }
 
