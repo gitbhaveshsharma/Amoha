@@ -3,17 +3,18 @@
 import type { Artwork } from "@/types"
 import { Button } from "@/components/ui/Button"
 import { Badge } from "@/components/ui/badge"
-import { Heart, Share2, MessageSquare, Eye, Star } from "lucide-react"
+import { Share2, Eye, Star } from "lucide-react"
+import { WishlistButton } from "@/components/WishlistButton"
 import { useState } from "react"
 import { MakeOfferButton } from "@/components/make-offer-button"
 import { useOffer } from "@/context/offer-context";
+import { AddToCartButton } from "@/components/addToCartButton"
 
 interface ArtworkDetailsProps {
     artwork: Artwork
 }
 
 export default function ArtworkDetails({ artwork }: ArtworkDetailsProps) {
-    const [isLiked, setIsLiked] = useState(false)
     const { makeOffer, isLoading } = useOffer();
     const [viewCount] = useState(1247)
     const [rating] = useState(4.8)
@@ -74,14 +75,18 @@ export default function ArtworkDetails({ artwork }: ArtworkDetailsProps) {
                     isLoading={isLoading}
                     amount={artwork.artist_price || 0}
                 />
-                <Button
-                    variant="outline"
+                <AddToCartButton
+                    artworkId={artwork.id}
                     size="lg"
-                    className="h-12 px-4 hover:bg-red-50 hover:border-red-200 transition-all duration-200"
-                    onClick={() => setIsLiked(!isLiked)}
+                    className="flex-1 h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                    variant="outline"
+                />
+                <div
+
+                    className="h-12 rounded-md p-1 px-2 has-[>svg]:px-4  hover:bg-red-50 hover:border-red-200 transition-all duration-200 border bg-background shadow-xs hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50"
                 >
-                    <Heart className={`h-5 w-5 transition-colors ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
-                </Button>
+                    <WishlistButton artworkId={artwork.id} />
+                </div>
                 <Button
                     variant="outline"
                     size="lg"
@@ -89,13 +94,8 @@ export default function ArtworkDetails({ artwork }: ArtworkDetailsProps) {
                 >
                     <Share2 className="h-5 w-5" />
                 </Button>
-                <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-12 px-4 hover:bg-green-50 hover:border-green-200 transition-all duration-200"
-                >
-                    <MessageSquare className="h-5 w-5" />
-                </Button>
+
+
             </div>
 
             {/* Description */}

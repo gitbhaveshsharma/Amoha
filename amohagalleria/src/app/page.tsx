@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <div>
       <Navbar />
-      <main>
+      <main className="mt-24">
         {/* <HeroImage /> */}
         <HomePage />
       </main>

@@ -2,11 +2,20 @@
 import { createClient } from 'redis';
 
 export const redisClient = createClient({
-    url: process.env.REDIS_URL
+    url: process.env.REDIS_URL,
+    socket: {
+        connectTimeout: 5000,
+    },
 });
 
 redisClient.on('error', (err) => console.error('Redis Client Error', err));
-await redisClient.connect();
+redisClient.on('connect', () => console.log('Redis Client Connected'));
+redisClient.on('ready', () => console.log('Redis Client Ready'));
+
+// Ensure connection is established
+if (!redisClient.isOpen) {
+    await redisClient.connect();
+}
 
 type Status = 'active' | 'removed';
 
@@ -24,8 +33,16 @@ type CartItem = {
 
 // Generic functions to handle both wishlist and cart
 const getGuestData = async <T extends WishlistItem | CartItem>(deviceId: string, type: 'wishlist' | 'cart'): Promise<T[]> => {
-    const dataJson = await redisClient.hGet(`guest:${deviceId}`, type);
-    return dataJson ? JSON.parse(dataJson) as T[] : [];
+    try {
+        if (!redisClient.isOpen) {
+            await redisClient.connect();
+        }
+        const dataJson = await redisClient.hGet(`guest:${deviceId}`, type);
+        return dataJson ? JSON.parse(dataJson) as T[] : [];
+    } catch (error) {
+        console.error(`Error getting guest ${type}:`, error);
+        return [];
+    }
 };
 
 const updateGuestData = async <T extends WishlistItem | CartItem>(deviceId: string, type: 'wishlist' | 'cart', artworkId: string, status: Status) => {

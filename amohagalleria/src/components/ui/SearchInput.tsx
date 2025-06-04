@@ -49,7 +49,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
             )}
             <input
                 type="text"
-                placeholder={"Search " + placeholder}
+                placeholder={placeholder}
                 aria-label={placeholder || "Search input"}
                 role="searchbox"
                 className={`w-full px-4 py-2 ${icon ? (iconPosition === "left" ? "pl-10" : "pr-10") : ""} text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[--primary-button-color] ${inputClassName}`}
