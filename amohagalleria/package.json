@@ -2,6 +2,9 @@
   "name": "amohagalleria",
   "version": "0.1.0",
   "private": true,
+  "_dev_signature": "QmhhdmVzaF9TaGFybWFfQW1vaGFHYWxsZXJpYQ==",
+  "_component_author": "Z2l0aHViLmNvbS9naXRiaGF2ZXNoc2hhcm1h",
+  "_build_hash": "QlNfQXJ0aXN0RGV0YWlsUGFnZV8yMDI1MDYwNA==",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

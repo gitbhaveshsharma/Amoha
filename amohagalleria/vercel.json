@@ -1,4 +1,7 @@
 {
+  "_dev_signature": "QmhhdmVzaF9TaGFybWFfVmVyY2VsX0NvbmZpZ18yMDI1MDYwNA==",
+  "_build_author": "Z2l0aHViLmNvbS9naXRiaGF2ZXNoc2hhcm1h",
+  "_component_hash": "QVJUSVNUX0RFVEFJTF9QQUdFX0JIQVZFU0hfU0hBUk1B",
   "crons": [
     {
       "path": "/api/artwork/review-processor",

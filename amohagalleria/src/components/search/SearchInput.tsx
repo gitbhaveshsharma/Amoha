@@ -12,6 +12,11 @@ interface ArtworkSearchInputProps {
     autoFocus?: boolean;
 }
 
+interface Suggestion {
+    suggestion: string;
+    artwork_count: number;
+}
+
 const SuggestionSkeleton: React.FC = () => (
     <div className="px-4 py-2 animate-pulse">
         <div className="flex items-center space-x-3">
@@ -31,7 +36,8 @@ export const ArtworkSearchInput: React.FC<ArtworkSearchInputProps> = ({
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [inputValue, setInputValue] = useState('');
-    const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+    const [isFocused, setIsFocused] = useState(false);
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const {
         suggestions,
@@ -45,20 +51,19 @@ export const ArtworkSearchInput: React.FC<ArtworkSearchInputProps> = ({
 
     // Debounced search function
     const debouncedSearch = useCallback((value: string) => {
-        if (debounceTimer) {
-            clearTimeout(debounceTimer);
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
         }
 
-        const timer = setTimeout(() => {
+        debounceTimerRef.current = setTimeout(() => {
             if (value.trim().length >= 2) {
                 fetchSuggestions(value);
+                setShowSuggestions(true);
             } else {
                 clearSuggestions();
             }
         }, 300);
-
-        setDebounceTimer(timer);
-    }, [debounceTimer, fetchSuggestions, clearSuggestions]);
+    }, [fetchSuggestions, clearSuggestions, setShowSuggestions]);
 
     // Handle input change
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,28 +74,31 @@ export const ArtworkSearchInput: React.FC<ArtworkSearchInputProps> = ({
 
         if (value.length === 0) {
             clearSuggestions();
+            setShowSuggestions(false);
         }
     };
 
     // Handle suggestion click
-    const handleSuggestionClick = (suggestion: string) => {
-        setInputValue(suggestion);
-        setQuery(suggestion);
+    const handleSuggestionClick = (suggestion: Suggestion) => {
+        setInputValue(suggestion.suggestion);
+        setQuery(suggestion.suggestion);
         setShowSuggestions(false);
+        inputRef.current?.focus();
 
         if (onSelect) {
-            onSelect(suggestion);
+            onSelect(suggestion.suggestion);
         } else {
-            router.push(`/search?q=${encodeURIComponent(suggestion)}`);
+            router.push(`/search?q=${encodeURIComponent(suggestion.suggestion)}`);
         }
     };
 
     // Handle form submit
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (inputValue.trim()) {
+        const trimmedValue = inputValue.trim();
+        if (trimmedValue) {
             setShowSuggestions(false);
-            router.push(`/search?q=${encodeURIComponent(inputValue.trim())}`);
+            router.push(`/search?q=${encodeURIComponent(trimmedValue)}`);
         }
     };
 
@@ -99,6 +107,7 @@ export const ArtworkSearchInput: React.FC<ArtworkSearchInputProps> = ({
         setInputValue('');
         setQuery('');
         clearSuggestions();
+        setShowSuggestions(false);
         inputRef.current?.focus();
     };
 
@@ -108,6 +117,25 @@ export const ArtworkSearchInput: React.FC<ArtworkSearchInputProps> = ({
             setShowSuggestions(false);
             inputRef.current?.blur();
         }
+    };
+
+    // Handle focus
+    const handleFocus = () => {
+        setIsFocused(true);
+        if (inputValue.trim().length >= 2 && suggestions.length > 0) {
+            setShowSuggestions(true);
+        }
+    };
+
+    // Handle blur
+    const handleBlur = () => {
+        setIsFocused(false);
+        // Delay hiding suggestions to allow click events to process
+        setTimeout(() => {
+            if (!isFocused) {
+                setShowSuggestions(false);
+            }
+        }, 200);
     };
 
     // Click outside to close suggestions
@@ -127,11 +155,11 @@ export const ArtworkSearchInput: React.FC<ArtworkSearchInputProps> = ({
     // Cleanup debounce timer
     useEffect(() => {
         return () => {
-            if (debounceTimer) {
-                clearTimeout(debounceTimer);
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
             }
         };
-    }, [debounceTimer]);
+    }, []);
 
     return (
         <div ref={containerRef} className={cn("relative w-full", className)}>
@@ -147,6 +175,8 @@ export const ArtworkSearchInput: React.FC<ArtworkSearchInputProps> = ({
                         value={inputValue}
                         onChange={handleInputChange}
                         onKeyDown={handleKeyDown}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
                         placeholder={placeholder}
                         autoFocus={autoFocus}
                         className={cn(
@@ -181,8 +211,9 @@ export const ArtworkSearchInput: React.FC<ArtworkSearchInputProps> = ({
                     ) : suggestions.length > 0 ? (
                         suggestions.map((suggestion, index) => (
                             <button
-                                key={index}
-                                onClick={() => handleSuggestionClick(suggestion.suggestion)}
+                                key={`${suggestion.suggestion}-${index}`}
+                                type="button"
+                                onClick={() => handleSuggestionClick(suggestion)}
                                 className="w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100 last:border-b-0 text-sm"
                             >
                                 <div className="flex items-center justify-between">

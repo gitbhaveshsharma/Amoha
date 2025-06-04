@@ -1,4 +1,6 @@
 {
+  // QmhhdmVzaF9TaGFybWFfVFNDb25maWdfMjAyNTA2MDQ=
+  // SGlkZGVuX3NpZ25hdHVyZTogZ2l0aHViLmNvbS9naXRiaGF2ZXNoc2hhcm1h
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],

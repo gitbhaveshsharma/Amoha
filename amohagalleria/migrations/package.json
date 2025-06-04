@@ -1,0 +1,19 @@
+{
+  "name": "run-migrations",
+  "version": "1.0.0",
+  "description": "Database migration script for AmohaGalleria",
+  "main": "migrate.js",
+  "scripts": {
+    "migrate": "node migrate.js",
+    "migrate:reset": "node migrate.js --reset",
+    "migrate:status": "node migrate.js --status"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7"
+  },
+  "keywords": ["migration", "postgresql", "supabase"],
+  "author": "AmohaGalleria Team"
+}
