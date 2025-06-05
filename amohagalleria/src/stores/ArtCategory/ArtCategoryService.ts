@@ -20,7 +20,7 @@ export class ArtCategoryService {
             throw error;
         }
 
-        console.log('Fetched art categories:', data);
+        // console.log('Fetched art categories:', data);
         return (data as ArtCategory[]) || [];
     }
 
@@ -37,7 +37,7 @@ export class ArtCategoryService {
             return null;
         }
 
-        console.log(`Fetched art category with slug ${slug}:`, data);
+        // console.log(`Fetched art category with slug ${slug}:`, data);
         return data as ArtCategory;
     }
 
@@ -54,7 +54,7 @@ export class ArtCategoryService {
             throw error;
         }
 
-        console.log('Created art category:', data);
+        // console.log('Created art category:', data);
         return data as ArtCategory;
     }
 
@@ -75,7 +75,7 @@ export class ArtCategoryService {
             return null;
         }
 
-        console.log(`Updated art category with slug ${slug}:`, data);
+        // console.log(`Updated art category with slug ${slug}:`, data);
         return data as ArtCategory;
     }
 
@@ -91,7 +91,7 @@ export class ArtCategoryService {
             return false;
         }
 
-        console.log(`Deleted art category with slug ${slug}`);
+        // console.log(`Deleted art category with slug ${slug}`);
         return true;
     }
 }

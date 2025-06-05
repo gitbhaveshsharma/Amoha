@@ -1,6 +1,8 @@
 // services/searchService.ts
 import { supabase } from "@/lib/supabase";
+import { FilterService } from "../filter/filterService";
 import type { SearchSuggestion, SearchResult } from "@/types/search";
+import type { FilterServiceOptions, FilteredArtwork } from "@/types/filter";
 
 export class SearchService {
     static async getSuggestions(query: string): Promise<SearchSuggestion[]> {
@@ -16,7 +18,9 @@ export class SearchService {
             if (error) {
                 console.error('Error fetching suggestions:', error);
                 throw new Error('Failed to fetch suggestions');
-            } return Array.isArray(data) ? data : [];
+            }
+
+            return Array.isArray(data) ? data : [];
         } catch (error) {
             console.error('Search service error:', error);
             throw error;
@@ -50,7 +54,9 @@ export class SearchService {
                 if (!artistError && artistCheck && artistCheck.length > 0) {
                     isArtistSearch = true;
                 }
-            } const { data, error } = await supabase.rpc('search_artworks', {
+            }
+
+            const { data, error } = await supabase.rpc('search_artworks', {
                 search_query: query.trim(),
                 limit_count: limit + 1, // Fetch one extra to check if there are more
                 offset_count: offset,
@@ -107,18 +113,83 @@ export class SearchService {
         }
     }
 
+    // New method to search and then filter
+    static async searchAndFilter(
+        query: string,
+        filterOptions: Omit<FilterServiceOptions, 'artwork_ids'> = {},
+        page: number = 1,
+        limit: number = 20
+    ): Promise<{
+        results: SearchResult[];
+        hasMore: boolean;
+        total: number;
+        isArtistSearch: boolean;
+        artworkIds: string[];
+    }> {
+        try {
+            if (!query || query.trim().length < 2) {
+                return {
+                    results: [],
+                    hasMore: false,
+                    total: 0,
+                    isArtistSearch: false,
+                    artworkIds: []
+                };
+            }
+
+            // First, get search results to extract artwork IDs
+            const searchResults = await this.searchArtworks(query, 1, 1000); // Get more results for filtering
+
+            if (searchResults.results.length === 0) {
+                return {
+                    results: [],
+                    hasMore: false,
+                    total: 0,
+                    isArtistSearch: searchResults.isArtistSearch,
+                    artworkIds: []
+                };
+            }
+
+            // Extract artwork IDs from search results
+            const artworkIds = searchResults.results.map(result => result.id);
+
+            // Apply filters to the search results
+            const filterServiceOptions: FilterServiceOptions = {
+                ...filterOptions,
+                artwork_ids: artworkIds,
+                limit_count: limit,
+                offset_count: (page - 1) * limit
+            };
+
+            const filteredResults = await FilterService.filterArtworks(filterServiceOptions);
+
+            return {
+                results: (filteredResults.results as FilteredArtwork[]).map(result => ({
+                    ...result,
+                    similarity_score: 0 // Default value, adjust if you have a better source
+                })),
+                hasMore: filteredResults.hasMore,
+                total: filteredResults.total,
+                isArtistSearch: searchResults.isArtistSearch,
+                artworkIds
+            };
+        } catch (error) {
+            console.error('Search and filter error:', error);
+            throw error;
+        }
+    }
 
     static async getPopularSearchTerms(): Promise<string[]> {
         try {
             // Get popular categories and mediums as search suggestions
             const { data: categories, error: catError } = await supabase
-                .from('artwork')
+                .from('artworks')
                 .select('art_category')
                 .eq('status', 'active')
                 .not('art_category', 'is', null);
 
             const { data: mediums, error: medError } = await supabase
-                .from('artwork')
+                .from('artworks')
                 .select('medium')
                 .eq('status', 'active')
                 .not('medium', 'is', null);

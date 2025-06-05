@@ -25,8 +25,6 @@ export interface SearchResult {
     user_id: string;
     created_at: string;
     updated_at: string;
-    is_original: boolean;
-    edition_number: string | null;
     currency: string;
     is_featured: boolean;
     similarity_score: number;

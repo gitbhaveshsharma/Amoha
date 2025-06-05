@@ -367,37 +367,6 @@ $$;
 
 -- function: artwork_reviews
 
-CREATE TABLE artwork_reviews (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  artwork_id UUID NOT NULL REFERENCES artworks(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-
-  -- Processing Status
-  processing_status TEXT NOT NULL DEFAULT 'queued' 
-    CHECK (processing_status IN ('queued', 'processing', 'completed', 'failed')),
-
-  -- Image Analysis Results
-  image_verdict TEXT CHECK (image_verdict IN ('approved', 'rejected', 'pending')),
-  nsfw_scores JSONB, -- Stores {porn: 0.xx, sexy: 0.xx, hentai: 0.xx, neutral: 0.xx, drawing: 0.xx}
-  image_rejection_reasons TEXT[],
-
-  -- Text Analysis Results
-  text_verdict TEXT CHECK (text_verdict IN ('approved', 'rejected', 'pending')),
-  grammar_issues JSONB, -- Stores LanguageTool API response
-  text_rejection_reasons TEXT[],
-
-  -- Metadata
-  attempt_count INTEGER DEFAULT 0,
-  last_processed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_artwork_reviews_queued ON artwork_reviews (processing_status) 
-  WHERE processing_status = 'queued';
-
-CREATE INDEX idx_artwork_reviews_artwork_id ON artwork_reviews (artwork_id);
-
 
 CREATE OR REPLACE FUNCTION fn_queue_artwork_review()
 RETURNS TRIGGER AS $$
@@ -412,6 +381,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Drop trigger if it exists before creating
+DROP TRIGGER IF EXISTS trg_queue_artwork_review ON artworks;
 
 CREATE TRIGGER trg_queue_artwork_review
 AFTER INSERT ON artworks
@@ -438,6 +409,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+
+-- Drop trigger if it exists before creating
+DROP TRIGGER IF EXISTS trg_update_artwork_status ON artwork_reviews;
 
 CREATE TRIGGER trg_update_artwork_status
 AFTER UPDATE ON artwork_reviews
@@ -903,43 +877,45 @@ END;
 $$;
 
 -- Filter artworks 
-CREATE OR REPLACE FUNCTION filter_artworks(
-  -- Filter by specific artwork IDs (e.g. from search results)
-  artwork_ids UUID[] DEFAULT NULL,
 
+-- Create the updated filtering function that matches your TypeScript interface
+CREATE OR REPLACE FUNCTION filter_artworks(
+  -- Artwork IDs filter (for search integration)
+  artwork_ids UUID[] DEFAULT NULL,
+  
   -- Basic filters
   categories TEXT[] DEFAULT NULL,
   mediums TEXT[] DEFAULT NULL,
-  status_filter TEXT DEFAULT 'active', -- 'active', 'listed', or 'active,listed'
-
+  status_filter TEXT DEFAULT 'active',
+  
   -- Price range
   min_price NUMERIC DEFAULT NULL,
   max_price NUMERIC DEFAULT NULL,
-
+  
   -- Artist filters
   artist_ids UUID[] DEFAULT NULL,
-  artist_name_filter TEXT DEFAULT NULL,  -- renamed to avoid conflict
-
+  artist_name_filter TEXT DEFAULT NULL,
+  
   -- Date range
   min_year INTEGER DEFAULT NULL,
   max_year INTEGER DEFAULT NULL,
-
-  -- Dimensions from string (e.g. "120 x 80")
+  
+  -- Dimensions
   min_width_cm INTEGER DEFAULT NULL,
   max_width_cm INTEGER DEFAULT NULL,
   min_height_cm INTEGER DEFAULT NULL,
   max_height_cm INTEGER DEFAULT NULL,
-
+  
   -- Location
   locations TEXT[] DEFAULT NULL,
-
-  -- Featured/trending
+  
+  -- Featured and trending
   only_featured BOOLEAN DEFAULT FALSE,
   only_trending BOOLEAN DEFAULT FALSE,
-
-  -- Sorting
+  
+  -- Sorting options
   sort_by TEXT DEFAULT 'created_at_desc',
-
+  
   -- Pagination
   limit_count INTEGER DEFAULT 20,
   offset_count INTEGER DEFAULT 0
@@ -966,144 +942,161 @@ RETURNS TABLE(
   image_3_url TEXT,
   image_4_url TEXT,
   artist_name TEXT,
-  artist_avatar TEXT,
-  view_count BIGINT,
-  like_count BIGINT
+  artist_avatar TEXT
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
   RETURN QUERY
-  WITH artwork_stats AS (
-    SELECT 
-      a.id,
-      COUNT(DISTINCT v.id) AS view_count,
-      COUNT(DISTINCT l.id) AS like_count
-    FROM artworks a
-    LEFT JOIN artwork_views v ON a.id = v.artwork_id
-    LEFT JOIN likes l ON a.id = l.artwork_id
-    GROUP BY a.id
-  ),
-  filtered_artworks AS (
-    SELECT 
-      a.*,
-      p.name AS artist_name,
-      p.avatar_url AS artist_avatar,
-      COALESCE(s.view_count, 0) AS view_count,
-      COALESCE(s.like_count, 0) AS like_count,
-      (
-        SELECT COUNT(*) FROM artwork_views v 
-        WHERE v.artwork_id = a.id 
-        AND v.viewed_at > NOW() - INTERVAL '30 days'
-      ) + (
-        SELECT COUNT(*) FROM likes l 
-        WHERE l.artwork_id = a.id 
-        AND l.created_at > NOW() - INTERVAL '30 days'
-      ) AS recent_engagement
-    FROM artworks a
-    JOIN profile p ON a.user_id = p.user_id
-    LEFT JOIN artwork_stats s ON a.id = s.id
-    WHERE 
-      -- Filter by artwork IDs if provided (e.g., from search results)
-      (artwork_ids IS NULL OR a.id = ANY(artwork_ids))
-
-      -- Status
-      AND a.status = ANY(string_to_array(status_filter, ',')::text[])
-
-      -- Categories
-      AND (categories IS NULL OR a.art_category = ANY(categories))
-
-      -- Mediums
-      AND (mediums IS NULL OR a.medium = ANY(mediums))
-
-      -- Price range
-      AND (min_price IS NULL OR a.artist_price >= min_price)
-      AND (max_price IS NULL OR a.artist_price <= max_price)
-
-      -- Artist filters
-      AND (artist_ids IS NULL OR a.user_id = ANY(artist_ids))
-      AND (
-        artist_name_filter IS NULL 
-        OR p.name ILIKE '%' || artist_name_filter || '%'
-        OR similarity(LOWER(p.name), LOWER(artist_name_filter)) > 0.2
-      )
-
-      -- Date range
-      AND (min_year IS NULL OR EXTRACT(YEAR FROM a.date) >= min_year)
-      AND (max_year IS NULL OR EXTRACT(YEAR FROM a.date) <= max_year)
-
-      -- Dimensions from string (e.g., "120 x 80")
-      AND (
-        min_width_cm IS NULL OR 
-        (SUBSTRING(a.dimensions FROM '^(\d+)')::INTEGER >= min_width_cm)
-      )
-      AND (
-        max_width_cm IS NULL OR 
-        (SUBSTRING(a.dimensions FROM '^(\d+)')::INTEGER <= max_width_cm)
-      )
-      AND (
-        min_height_cm IS NULL OR 
-        (SUBSTRING(a.dimensions FROM '\d+\s*x\s*(\d+)')::INTEGER >= min_height_cm)
-      )
-      AND (
-        max_height_cm IS NULL OR 
-        (SUBSTRING(a.dimensions FROM '\d+\s*x\s*(\d+)')::INTEGER <= max_height_cm)
-      )
-
-      -- Location
-      AND (locations IS NULL OR a.art_location = ANY(locations))
-
-      -- Featured
-      AND (NOT only_featured OR a.is_featured)
-
-      -- Trending (more than 50 engagements in last 30 days)
-      AND (
-        NOT only_trending OR (
-          (
-            SELECT COUNT(*) FROM artwork_views v 
-            WHERE v.artwork_id = a.id AND v.viewed_at > NOW() - INTERVAL '30 days'
-          ) + (
-            SELECT COUNT(*) FROM likes l 
-            WHERE l.artwork_id = a.id AND l.created_at > NOW() - INTERVAL '30 days'
-          ) > 50
-        )
-      )
-  )
   SELECT 
-    fa.id,
-    fa.title,
-    fa.description,
-    fa.medium,
-    fa.dimensions,
-    fa.date,
-    fa.art_location,
-    fa.artist_price,
-    fa.user_id,
-    fa.image_url,
-    fa.status,
-    fa.created_at,
-    fa.updated_at,
-    fa.currency,
-    fa.art_category,
-    fa.is_featured,
-    fa.image_1_url,
-    fa.image_2_url,
-    fa.image_3_url,
-    fa.image_4_url,
-    fa.artist_name,
-    fa.artist_avatar,
-    fa.view_count,
-    fa.like_count
-  FROM filtered_artworks fa
+    a.id,
+    a.title,
+    a.description,
+    a.medium,
+    a.dimensions,
+    a.date,
+    a.art_location,
+    a.artist_price,
+    a.user_id,
+    a.image_url,
+    a.status,
+    a.created_at,
+    a.updated_at,
+    a.currency,
+    a.art_category,
+    a.is_featured,
+    a.image_1_url,
+    a.image_2_url,
+    a.image_3_url,
+    a.image_4_url,
+    COALESCE(p.name, '') AS artist_name,
+    COALESCE(p.avatar_url, '') AS artist_avatar
+  FROM artworks a
+  LEFT JOIN profile p ON a.user_id = p.user_id
+  WHERE 
+    -- Artwork IDs filter (for search integration)
+    (artwork_ids IS NULL OR a.id = ANY(artwork_ids))
+    
+    -- Status filter - handle both single status and comma-separated statuses
+    AND (
+      CASE 
+        WHEN status_filter = 'active' THEN a.status = 'active'
+        WHEN status_filter = 'listed' THEN a.status = 'listed'
+        WHEN status_filter = 'active,listed' THEN a.status IN ('active', 'listed')
+        ELSE a.status = status_filter
+      END
+    )
+    
+    -- Category filter - case insensitive comparison
+    AND (
+      categories IS NULL OR 
+      EXISTS (
+        SELECT 1 FROM unnest(categories) AS cat 
+        WHERE LOWER(TRIM(a.art_category)) = LOWER(TRIM(cat))
+      )
+    )
+    
+    -- Medium filter - case insensitive comparison
+    AND (
+      mediums IS NULL OR 
+      EXISTS (
+        SELECT 1 FROM unnest(mediums) AS med 
+        WHERE LOWER(TRIM(a.medium)) = LOWER(TRIM(med))
+      )
+    )
+    
+    -- Price range filter
+    AND (min_price IS NULL OR a.artist_price >= min_price)
+    AND (max_price IS NULL OR a.artist_price <= max_price)
+    
+    -- Artist ID filter
+    AND (artist_ids IS NULL OR a.user_id = ANY(artist_ids))
+    
+    -- Artist name filter (fuzzy match)
+    AND (
+      artist_name_filter IS NULL 
+      OR p.name ILIKE '%' || artist_name_filter || '%'
+    )
+    
+    -- Date/year range filter
+    AND (min_year IS NULL OR EXTRACT(YEAR FROM a.date) >= min_year)
+    AND (max_year IS NULL OR EXTRACT(YEAR FROM a.date) <= max_year)
+    
+    -- Dimensions filter (more robust parsing)
+    AND (
+      min_width_cm IS NULL OR 
+      CASE 
+        WHEN a.dimensions IS NOT NULL AND a.dimensions ~ '^\d+' THEN
+          (REGEXP_REPLACE(SPLIT_PART(a.dimensions, 'x', 1), '[^0-9]', '', 'g'))::INTEGER >= min_width_cm
+        ELSE TRUE
+      END
+    )
+    AND (
+      max_width_cm IS NULL OR 
+      CASE 
+        WHEN a.dimensions IS NOT NULL AND a.dimensions ~ '^\d+' THEN
+          (REGEXP_REPLACE(SPLIT_PART(a.dimensions, 'x', 1), '[^0-9]', '', 'g'))::INTEGER <= max_width_cm
+        ELSE TRUE
+      END
+    )
+    AND (
+      min_height_cm IS NULL OR 
+      CASE 
+        WHEN a.dimensions IS NOT NULL AND a.dimensions ~ '\d+\s*x\s*\d+' THEN
+          (REGEXP_REPLACE(SPLIT_PART(a.dimensions, 'x', 2), '[^0-9]', '', 'g'))::INTEGER >= min_height_cm
+        ELSE TRUE
+      END
+    )
+    AND (
+      max_height_cm IS NULL OR 
+      CASE 
+        WHEN a.dimensions IS NOT NULL AND a.dimensions ~ '\d+\s*x\s*\d+' THEN
+          (REGEXP_REPLACE(SPLIT_PART(a.dimensions, 'x', 2), '[^0-9]', '', 'g'))::INTEGER <= max_height_cm
+        ELSE TRUE
+      END
+    )
+    
+    -- Location filter - case insensitive comparison
+    AND (
+      locations IS NULL OR 
+      EXISTS (
+        SELECT 1 FROM unnest(locations) AS loc 
+        WHERE LOWER(TRIM(a.art_location)) = LOWER(TRIM(loc))
+      )
+    )
+    
+    -- Featured filter
+    AND (NOT only_featured OR a.is_featured = true)
+    
+    -- Trending filter (you may need to define what makes an artwork "trending")
+    -- For now, let's assume trending means created within last 30 days and featured
+    AND (
+      NOT only_trending OR 
+      (a.created_at >= NOW() - INTERVAL '30 days' AND a.is_featured = true)
+    )
+    
   ORDER BY
     CASE sort_by
-      WHEN 'price_asc' THEN fa.artist_price
-      WHEN 'price_desc' THEN -fa.artist_price
-      WHEN 'featured' THEN CASE WHEN fa.is_featured THEN 0 ELSE 1 END
-      WHEN 'trending' THEN -fa.recent_engagement
-      ELSE EXTRACT(EPOCH FROM fa.created_at) * -1
-    END
-  LIMIT limit_count
-  OFFSET offset_count;
+      WHEN 'price_asc' THEN a.artist_price
+      ELSE NULL
+    END ASC,
+    CASE sort_by
+      WHEN 'price_desc' THEN a.artist_price
+      ELSE NULL
+    END DESC,
+    CASE sort_by
+      WHEN 'featured' THEN CASE WHEN a.is_featured THEN 0 ELSE 1 END
+      ELSE NULL
+    END ASC,
+    CASE sort_by
+      WHEN 'created_at_asc' THEN a.created_at
+      ELSE NULL
+    END ASC,
+    CASE sort_by
+      WHEN 'created_at_desc' THEN a.created_at
+      ELSE a.created_at -- Default: newest first
+    END DESC
+  LIMIT COALESCE(limit_count, 20)
+  OFFSET COALESCE(offset_count, 0);
 END;
 $$;

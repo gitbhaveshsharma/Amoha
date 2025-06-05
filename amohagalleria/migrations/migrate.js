@@ -1,13 +1,14 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config();
 
-class MigrationRunner {
-    constructor() {
+class MigrationRunner {    constructor() {
         this.client = new Client({
             connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+            ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.co') 
+                ? { rejectUnauthorized: false } 
+                : false
         });
         
         this.migrationsDir = __dirname;

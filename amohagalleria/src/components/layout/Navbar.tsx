@@ -27,6 +27,7 @@ import { UploadModal } from "@/components/UploadModal";
 import { useSession } from "@/hooks/useSession";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { BrowseItem } from "@/components/BrowseItem";
 
 const Skeleton = ({ className }: { className?: string }) => (
     <div className={`animate-pulse bg-gray-200 rounded ${className}`}></div>
@@ -45,6 +46,11 @@ const Navbar: React.FC = () => {
     const { openUploadModal } = useUploadStore();
     const { session } = useSession();
     const { cart, fetchCart, isLoading: cartLoading } = useCartStore();
+
+    const navItems = [
+        { href: "/", label: "Home" },
+        { href: "/artists", label: "Artists" },
+    ];
 
     useEffect(() => {
         const handleScroll = () => {
@@ -120,7 +126,7 @@ const Navbar: React.FC = () => {
             router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         } else {
             openUploadModal();
-            setIsProfileMenuOpen(false); // Close profile menu when upload is clicked
+            setIsProfileMenuOpen(false);
         }
     };
 
@@ -129,12 +135,6 @@ const Navbar: React.FC = () => {
 
     const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/forgot-password");
     const isActive = (path: string) => pathname === path;
-
-    const navItems = [
-        { href: "/", label: "Home" },
-        { href: "/artworks", label: "Browse" },
-        { href: "/artists", label: "Artists" },
-    ];
 
     const CartButton = () => {
         if (cartLoading) {
@@ -387,10 +387,10 @@ const Navbar: React.FC = () => {
                                     {item.label}
                                 </Link>
                             ))}
+                            <BrowseItem />
                         </div>
                     </div>
 
-                    {/* Always show these sections regardless of authentication status */}
                     <div className="mb-6">
                         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
                             Your Actions
@@ -535,6 +535,7 @@ const Navbar: React.FC = () => {
                             {item.label}
                         </Link>
                     ))}
+                    <BrowseItem />
                 </div>
 
                 <div className="flex-1 max-w-md mx-8">

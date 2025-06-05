@@ -2,8 +2,13 @@
 import { create } from 'zustand';
 import { SearchService } from './searchService';
 import type { SearchState, SearchActions } from '@/types/search';
+import type { FilterServiceOptions } from '@/types/filter';
 
-interface SearchStore extends SearchState, SearchActions { }
+interface SearchStore extends SearchState, SearchActions {
+    // New properties for search + filter integration
+    searchWithFilters: (query: string, filterOptions?: Omit<FilterServiceOptions, 'artwork_ids'>, page?: number) => Promise<void>;
+    searchArtworkIds: string[]; // Store the IDs from search for filter integration
+}
 
 export const useSearchStore = create<SearchStore>((set, get) => ({
     // Initial state
@@ -12,12 +17,38 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
     searchResults: [],
     isLoadingSuggestions: false,
     isLoadingResults: false,
-    showSuggestions: false, error: null,
+    showSuggestions: false,
+    error: null,
     totalResults: 0,
     currentPage: 1,
     hasMore: false,
     searchByArtist: false, // Auto-detected artist search
     isArtistDetected: false, // New flag to indicate if artist was auto-detected
+    searchArtworkIds: [], // New property for filter integration
+
+    // Missing methods
+    clearSuggestions: () => {
+        set({ suggestions: [], showSuggestions: false });
+    },
+    clearSearch: () => {
+        set({
+            searchResults: [],
+            totalResults: 0,
+            currentPage: 1,
+            hasMore: false,
+            searchByArtist: false,
+            isArtistDetected: false,
+            searchArtworkIds: [],
+            error: null,
+            query: ''
+        });
+    },
+    setShowSuggestions: (show: boolean) => {
+        set({ showSuggestions: show });
+    },
+    clearError: () => {
+        set({ error: null });
+    },
 
     // Actions
     setQuery: (query: string) => {
@@ -48,7 +79,9 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
                 showSuggestions: false
             });
         }
-    }, searchArtworks: async (query: string, page: number = 1) => {
+    },
+
+    searchArtworks: async (query: string, page: number = 1) => {
         if (!query || query.trim().length < 2) {
             set({
                 searchResults: [],
@@ -57,7 +90,8 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
                 currentPage: 1,
                 hasMore: false,
                 searchByArtist: false,
-                isArtistDetected: false
+                isArtistDetected: false,
+                searchArtworkIds: []
             });
             return;
         }
@@ -71,6 +105,8 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
                 20 // limit
             );
 
+            const artworkIds: string[] = results.map((result: { id: string }) => result.id);
+
             if (page === 1) {
                 // New search
                 set({
@@ -80,18 +116,22 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
                     hasMore,
                     searchByArtist: isArtistSearch || false,
                     isArtistDetected: isArtistSearch || false,
-                    isLoadingResults: false
+                    isLoadingResults: false,
+                    searchArtworkIds: artworkIds
                 });
             } else {
                 // Pagination - append results and keep existing total
                 const currentResults = get().searchResults;
                 const currentTotal = get().totalResults;
+                const currentArtworkIds = get().searchArtworkIds;
+
                 set({
                     searchResults: [...currentResults, ...results],
                     currentPage: page,
                     hasMore,
                     totalResults: total > 0 ? total : currentTotal, // Preserve total from first page
-                    isLoadingResults: false
+                    isLoadingResults: false,
+                    searchArtworkIds: [...currentArtworkIds, ...artworkIds]
                 });
             }
         } catch (error) {
@@ -100,37 +140,76 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
                 error: 'Failed to search artworks. Please try again.',
                 isLoadingResults: false,
                 searchResults: page === 1 ? [] : get().searchResults,
-                totalResults: page === 1 ? 0 : get().totalResults
+                totalResults: page === 1 ? 0 : get().totalResults,
+                searchArtworkIds: page === 1 ? [] : get().searchArtworkIds
             });
         }
     },
 
-    clearSuggestions: () => {
-        set({ suggestions: [], showSuggestions: false, isLoadingSuggestions: false });
-    },
+    // New method for search with filters
+    searchWithFilters: async (
+        query: string,
+        filterOptions: Omit<FilterServiceOptions, 'artwork_ids'> = {},
+        page: number = 1
+    ) => {
+        if (!query || query.trim().length < 2) {
+            set({
+                searchResults: [],
+                isLoadingResults: false,
+                totalResults: 0,
+                currentPage: 1,
+                hasMore: false,
+                searchByArtist: false,
+                isArtistDetected: false,
+                searchArtworkIds: []
+            });
+            return;
+        }
 
-    clearSearch: () => {
-        set({
-            query: '',
-            suggestions: [],
-            searchResults: [],
-            isLoadingSuggestions: false,
-            isLoadingResults: false,
-            showSuggestions: false,
-            error: null,
-            totalResults: 0,
-            currentPage: 1,
-            hasMore: false,
-            searchByArtist: false,
-            isArtistDetected: false
-        });
-    },
+        set({ isLoadingResults: true, error: null });
 
-    setShowSuggestions: (show: boolean) => {
-        set({ showSuggestions: show });
-    },
+        try {
+            const { results, hasMore, total, isArtistSearch, artworkIds } = await SearchService.searchAndFilter(
+                query,
+                filterOptions,
+                page,
+                20 // limit
+            );
 
-    clearError: () => {
-        set({ error: null });
-    }
+            if (page === 1) {
+                // New search with filters
+                set({
+                    searchResults: results,
+                    totalResults: total,
+                    currentPage: page,
+                    hasMore,
+                    searchByArtist: isArtistSearch || false,
+                    isArtistDetected: isArtistSearch || false,
+                    isLoadingResults: false,
+                    searchArtworkIds: artworkIds
+                });
+            } else {
+                // Pagination - append results
+                const currentResults = get().searchResults;
+                const currentTotal = get().totalResults;
+
+                set({
+                    searchResults: [...currentResults, ...results],
+                    currentPage: page,
+                    hasMore,
+                    totalResults: total > 0 ? total : currentTotal,
+                    isLoadingResults: false
+                });
+            }
+        } catch (error) {
+            console.error('Error searching with filters:', error);
+            set({
+                error: 'Failed to search artworks with filters. Please try again.',
+                isLoadingResults: false,
+                searchResults: page === 1 ? [] : get().searchResults,
+                totalResults: page === 1 ? 0 : get().totalResults,
+                searchArtworkIds: page === 1 ? [] : get().searchArtworkIds
+            });
+        }
+    },
 }));
